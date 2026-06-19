@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1F3864">
+<title>Stock Register</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:Arial,sans-serif;font-size:14px;background:#F0F4FA;color:#1a1a1a;min-height:100vh}
+
+/* ── LOGIN ── */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1F3864 0%,#2E75B6 100%);padding:20px}
+.login-card{background:#fff;border-radius:16px;padding:36px 32px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.login-logo{text-align:center;margin-bottom:24px}
+.login-logo .ico{font-size:48px;display:block;margin-bottom:8px}
+.login-logo h1{font-size:20px;font-weight:700;color:#1F3864}
+.login-logo p{font-size:12px;color:#888;margin-top:4px}
+.lf label{display:block;font-size:12px;font-weight:700;color:#555;margin-bottom:5px;margin-top:14px}
+.lf input,.lf select{width:100%;padding:11px 14px;border:1.5px solid #D0D7E6;border-radius:8px;font-size:14px;font-family:Arial;outline:none;background:#FAFBFD}
+.lf input:focus,.lf select:focus{border-color:#2E75B6;background:#fff}
+.login-btn{width:100%;margin-top:20px;padding:13px;background:#1F3864;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;transition:background .15s}
+.login-btn:hover{background:#0C2448}
+.login-err{background:#FCEBEB;color:#9C0006;border:1px solid #F09595;border-radius:8px;padding:10px 14px;font-size:13px;margin-top:12px;display:none}
+.login-footer{text-align:center;font-size:11px;color:#aaa;margin-top:20px}
+
+/* ── APP SHELL ── */
+.app{display:none;min-height:100vh;padding-bottom:68px}
+.topbar{background:#1F3864;color:#fff;padding:0 16px;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:200}
+.topbar h1{font-size:15px;font-weight:700}
+.topbar .sub{font-size:11px;opacity:.7;margin-top:1px}
+.tb-right{display:flex;gap:8px;align-items:center}
+.icon-btn{background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;padding:7px 11px;font-size:12px;font-weight:600;cursor:pointer}
+.icon-btn:active{background:rgba(255,255,255,.25)}
+.user-chip{background:rgba(255,255,255,.2);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:600;color:#fff;display:flex;align-items:center;gap:5px}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #E0E7EF;display:flex;z-index:200;height:60px}
+.bnav{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:none;background:none;font-size:10px;font-weight:600;color:#999;cursor:pointer;padding:6px 4px}
+.bnav.active{color:#1F3864}
+.bnav .ico{font-size:19px;line-height:1}
+
+/* ── PAGES ── */
+.page{display:none;padding:14px;max-width:900px;margin:0 auto}
+.page.active{display:block}
+
+/* ── COMPANY TABS ── */
+.co-tabs{display:flex;background:#fff;border-radius:10px;border:1px solid #E0E7EF;overflow:hidden;margin-bottom:14px}
+.co-tab{flex:1;padding:11px 6px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;border:none;background:none;color:#888;border-bottom:3px solid transparent;transition:all .15s}
+.co-tab.active.c0{background:#1F3864;color:#fff;border-bottom-color:transparent}
+.co-tab.active.c1{background:#27500A;color:#fff;border-bottom-color:transparent}
+.co-tab.active.c2{background:#712B13;color:#fff;border-bottom-color:transparent}
+.co-tab.active.c3{background:#5B3287;color:#fff;border-bottom-color:transparent}
+.co-tab.active.c4{background:#0A5F5A;color:#fff;border-bottom-color:transparent}
+.co-tab.active.c5{background:#7A4B00;color:#fff;border-bottom-color:transparent}
+
+/* ── KPIS ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.kpi{background:#fff;border-radius:10px;padding:12px;border:1px solid #E0E7EF;text-align:center}
+.kpi-lbl{font-size:10px;color:#888;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+.kpi-val{font-size:22px;font-weight:700}
+.g{color:#27500A}.r{color:#9C0006}.b{color:#0C447C}.a{color:#854F0B}
+
+/* ── CARDS ── */
+.card{background:#fff;border-radius:10px;padding:16px;border:1px solid #E0E7EF;margin-bottom:14px}
+.card-hd{font-size:13px;font-weight:700;color:#1F3864;margin-bottom:14px;display:flex;align-items:center;gap:6px}
+
+/* ── TYPE BUTTONS ── */
+.type-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.type-btn{padding:14px 8px;border-radius:10px;border:2px solid #E0E7EF;background:#fff;cursor:pointer;font-size:14px;font-weight:700;text-align:center;transition:all .15s;line-height:1.4}
+.type-btn .sub{font-size:10px;font-weight:400;opacity:.7;display:block;margin-top:3px}
+.type-btn.in.on{background:#EAF3DE;border-color:#3B6D11;color:#27500A}
+.type-btn.out.on{background:#FAECE7;border-color:#993C1D;color:#712B13}
+
+/* ── FORM ── */
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fl label{display:block;font-size:12px;font-weight:700;color:#555;margin-bottom:5px}
+.fl input,.fl select{width:100%;padding:10px 12px;border:1.5px solid #D0D7E6;border-radius:8px;font-size:13px;font-family:Arial;outline:none;background:#FAFBFD}
+.fl input:focus,.fl select:focus{border-color:#2E75B6;background:#fff}
+
+/* ── PRODUCT SELECT ── */
+.prod-search{width:100%;padding:10px 12px;border:1.5px solid #2E75B6;border-radius:8px 8px 0 0;font-size:13px;font-family:Arial;outline:none;background:#fff}
+.prod-list{width:100%;border:1.5px solid #2E75B6;border-top:none;border-radius:0 0 8px 8px;height:150px;font-size:13px;font-family:Arial;outline:none;background:#fff}
+
+/* ── PREVIEW BAR ── */
+.prev-bar{background:#E6F1FB;border:1px solid #B5D4F4;border-radius:8px;padding:10px 14px;font-size:12px;color:#0C447C;margin:14px 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pill{background:#0C447C;color:#fff;font-size:10px;padding:3px 7px;border-radius:4px;font-family:monospace}
+.pill.bal{background:#7B3F00}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:all .15s}
+.btn-p{background:#1F3864;color:#fff}.btn-p:hover{background:#0C2448}.btn-p:disabled{background:#aab4c4;cursor:not-allowed}
+.btn-o{background:#fff;color:#1F3864;border:1.5px solid #1F3864}.btn-o:hover{background:#EBF3FB}
+.btn-d{background:#fff;color:#9C0006;border:1px solid #F7C1C1;font-size:11px;padding:5px 10px;border-radius:6px}.btn-d:hover{background:#FCEBEB}
+.btn-sm{padding:7px 14px;font-size:12px}
+
+/* ── LEGEND ── */
+.legend{background:#E6F1FB;border:1px solid #B5D4F4;border-radius:8px;padding:9px 14px;font-size:11px;color:#0C447C;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+
+/* ── TOOLBAR ── */
+.tlb{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.tlb input,.tlb select{padding:8px 12px;border:1.5px solid #D0D7E6;border-radius:8px;font-size:13px;outline:none;background:#fff}
+.tlb input{flex:1;min-width:140px}
+
+/* ── TABLE ── */
+.tb-wrap{overflow-x:auto;border-radius:10px;border:1px solid #E0E7EF}
+table{width:100%;border-collapse:collapse;font-size:12px;min-width:650px}
+thead th{background:#1F3864;color:#fff;padding:9px 10px;text-align:left;font-size:11px;font-weight:700;white-space:nowrap}
+th.fth{background:#0C447C}
+th.bth{background:#7B3F00}
+tbody tr:nth-child(even){background:#F4F8FF}
+tbody tr:hover{background:#EBF3FB}
+td{padding:8px 10px;border-bottom:1px solid #E8EEF6;vertical-align:middle}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700}
+.bin{background:#EAF3DE;color:#27500A}.bout{background:#FAECE7;color:#712B13}
+.bal{font-weight:700;text-align:center;padding:2px 8px;border-radius:4px}
+.bpos{color:#27500A}.bneg{color:#9C0006;background:#FFC7CE}.bwarn{color:#854F0B;background:#FFEB9C}
+.nc{text-align:center;color:#0C447C;font-weight:600}
+.empty{text-align:center;padding:40px;color:#aaa;font-size:13px}
+
+/* ── ADMIN ── */
+.role-badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.role-admin{background:#FFF0E0;color:#854F0B}
+.role-staff{background:#E6F1FB;color:#0C447C}
+.user-row{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #E8EEF6}
+.user-row:last-child{border-bottom:none}
+.user-info{display:flex;flex-direction:column;gap:3px}
+.user-name{font-weight:700;font-size:13px}
+.user-meta{font-size:11px;color:#888}
+.add-user-form{background:#F4F8FF;border-radius:10px;padding:14px;border:1px solid #D0D7E6;margin-bottom:14px}
+.add-user-form .fg{grid-template-columns:1fr 1fr}
+.co-access{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.co-chk{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:6px 12px;border-radius:20px;border:2px solid #E0E7EF;cursor:pointer;user-select:none}
+.co-chk input{accent-color:#1F3864}
+.co-chk.c0{border-color:#BDD7EE;background:#EBF3FB}.co-chk.c1{border-color:#C6EFCE;background:#EAF3DE}.co-chk.c2{border-color:#F7C1C1;background:#FAECE7}
+.co-chk.c3{border-color:#D9C8F0;background:#F3EDFB}.co-chk.c4{border-color:#B0DDD9;background:#E6F5F4}.co-chk.c5{border-color:#F0D8A8;background:#FBF4E6}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:72px;left:50%;transform:translateX(-50%);background:#1F3864;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .3s;z-index:999;white-space:nowrap}
+.toast.show{opacity:1}
+
+/* ── SUMMARY VIEW TOGGLE ── */
+.sum-view-btn{padding:7px 14px;border-radius:20px;border:2px solid #D0D7E6;background:#fff;font-size:12px;font-weight:700;cursor:pointer;color:#888;transition:all .15s}
+.sum-view-btn.active{background:#1F3864;border-color:#1F3864;color:#fff}
+
+/* ── MISC ── */
+.sum-tb{width:100%;border-collapse:collapse;font-size:12px}
+.sum-tb th{background:#F0F4FA;color:#1F3864;padding:8px 10px;text-align:left;font-size:11px;font-weight:700}
+.sum-tb td{padding:8px 10px;border-bottom:1px solid #E8EEF6}
+.sum-tb tr:last-child td{border-bottom:none}
+.divider{text-align:center;font-size:11px;color:#888;margin:12px 0}
+
+@media(max-width:500px){
+  .fg{grid-template-columns:1fr}
+  .kpi-grid{grid-template-columns:repeat(3,1fr)}
+  .page{padding:10px}
+  .kpi-val{font-size:18px}
+  .add-user-form .fg{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- Cloud loader -->
+<div id="cloud-loader" style="display:none;position:fixed;inset:0;background:rgba(31,56,100,.93);z-index:9999;flex-direction:column;align-items:center;justify-content:center;color:#fff">
+  <div style="font-size:48px;margin-bottom:16px">&#128230;</div>
+  <div style="font-size:16px;font-weight:700">Loading data...</div>
+  <div style="font-size:12px;opacity:.7;margin-top:6px">Please wait</div>
+</div>
+
+
+<!-- ══════════════════ LOGIN SCREEN ══════════════════ -->
+<div class="login-wrap" id="login-screen" style="display:none">
+  <div class="login-card">
+    <div class="login-logo">
+      <span class="ico">&#128230;</span>
+      <h1>Stock Register</h1>
+      <p>Please sign in to continue</p>
+    </div>
+    <div class="lf">
+      <label>Username</label>
+      <input type="text" id="l-user" placeholder="Enter username" autocomplete="username">
+      <label>Password</label>
+      <input type="password" id="l-pass" placeholder="Enter password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="login-btn" onclick="doLogin()">&#128274; Sign In</button>
+    <div class="login-err" id="login-err">&#9888; Invalid username or password</div>
+    <div class="login-footer">Contact your administrator to reset credentials</div>
+
+  </div>
+</div>
+
+<!-- ══════════════════ APP ══════════════════ -->
+<div class="app" id="app">
+
+  <div class="topbar">
+    <div>
+      <div class="sub" id="ent-count">Stock Register</div>
+      <h1>&#128230; Stock Register</h1>
+    </div>
+    <div class="tb-right">
+      <span class="user-chip" id="user-chip">&#128100; —</span>
+      <button class="icon-btn" onclick="doLogout()">&#128275; Out</button>
+    </div>
+  </div>
+
+  <!-- ADD PAGE -->
+  <div class="page active" id="page-add">
+    <div class="card">
+      <div class="card-hd">&#128260; Transaction type</div>
+      <div class="type-row">
+        <button class="type-btn in on" id="btn-in" onclick="setType('IN')">&#9650; STOCK IN<span class="sub">Goods received</span></button>
+        <button class="type-btn out" id="btn-out" onclick="setType('OUT')">&#9660; STOCK OUT<span class="sub">Goods issued / sold</span></button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-hd">&#9998; Entry details</div>
+      <div class="fg">
+        <div class="fl" style="grid-column: 1 / -1;">
+          <label>Select Company *</label>
+          <select id="add-company-select" onchange="selectAddCo(parseInt(this.value))" style="border: 1.5px solid #1F3864; font-weight: bold; background: #FFF;"></select>
+        </div>
+        <div class="fl"><label>Date *</label><input type="date" id="fd"></div>
+        <div class="fl"><label>Quantity *</label><input type="number" id="fq" min="1" placeholder="0" oninput="prevBal()"></div>
+        <div class="fl" style="grid-column:1/-1">
+          <label>Item Name * — filtered by selected company</label>
+          <input class="prod-search" id="fi-search" type="text" placeholder="&#128269; type to filter current company products..." oninput="filterProd(this.value)" autocomplete="off">
+          <select class="prod-list" id="fi" size="6" onclick="pickFromSelect()" onchange="pickFromSelect()"></select>
+          <div id="add-product-bar" style="display:none;margin-top:8px;background:#FFF8E7;border:1.5px dashed #E6A817;border-radius:8px;padding:9px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span style="font-size:12px;color:#7A4B00;flex:1">&#10024; <strong id="new-prod-name"></strong> is not in this list</span>
+            <button class="btn btn-sm" onclick="addNewProduct()" style="background:#E6A817;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer">&#43; Add to list &amp; use</button>
+          </div>
+        </div>
+        <div class="fl"><label>Unit</label><input type="text" id="fu" value="Pcs" readonly style="background:#EAF3DE;color:#27500A;font-weight:700;cursor:not-allowed;border-color:#97C459"></div>
+        <div class="fl"><label id="plbl">From — Supplier *</label><input type="text" id="fp" placeholder="Supplier name"></div>
+        <div class="fl"><label>Remarks</label><input type="text" id="fr" placeholder="Optional notes"></div>
+        <div class="fl"><label>Verified By</label><input type="text" id="fv" placeholder="Owner / Supervisor"></div>
+      </div>
+      <div class="prev-bar">
+        &#128290; Balance after entry: &nbsp;<strong id="pbval" style="font-size:15px">—</strong>
+        &nbsp;<span class="pill bal">Balance = Total IN &minus; OUT</span>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-p" onclick="saveEntry()">&#10003; Save Entry</button>
+        <button class="btn btn-o" onclick="clearForm()">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- REGISTER PAGE -->
+  <div class="page" id="page-reg">
+    <div class="co-tabs" id="reg-co-tabs"></div>
+    <div class="legend">
+      &#9432; <span class="pill">Running IN</span> <span class="pill">Running OUT</span>
+      <span class="pill bal">Balance = IN &minus; OUT</span>
+      &nbsp; Red = investigate &nbsp; Amber = low stock
+    </div>
+    <div class="tlb">
+      <input type="text" id="srch" placeholder="&#128269; Search item, staff..." oninput="renderReg()">
+      <select id="ftype" onchange="renderReg()">
+        <option value="">All types</option>
+        <option value="IN">IN only</option>
+        <option value="OUT">OUT only</option>
+      </select>
+      <button class="btn btn-o btn-sm" onclick="clearFil()">Clear</button>
+      <button class="btn btn-o btn-sm" onclick="exportCSV()">&#11015; CSV</button>
+      <span style="font-size:12px;color:#888" id="rcnt"></span>
+    </div>
+    <div class="tb-wrap">
+      <table>
+        <thead><tr>
+          <th>Date</th><th>Item</th><th>Type</th><th>Qty</th>
+          <th>Party</th><th>Staff</th><th>Remarks</th>
+          <th class="fth">Run IN</th><th>Run OUT</th>
+          <th class="bth">Balance</th><th></th>
+        </tr></thead>
+        <tbody id="rtbody"><tr><td colspan="11" class="empty">No entries yet</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SUMMARY PAGE -->
+  <div class="page" id="page-sum">
+    <div class="co-tabs" id="sum-co-tabs"></div>
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-lbl">Total IN</div><div class="kpi-val g" id="s1">0</div></div>
+      <div class="kpi"><div class="kpi-lbl">Total OUT</div><div class="kpi-val r" id="s2">0</div></div>
+      <div class="kpi"><div class="kpi-lbl">Balance</div><div class="kpi-val b" id="s3">0</div></div>
+    </div>
+    <div class="kpi-grid" style="grid-template-columns:1fr 1fr">
+      <div class="kpi"><div class="kpi-lbl">Today's entries</div><div class="kpi-val a" id="s4">0</div></div>
+      <div class="kpi"><div class="kpi-lbl">Total entries</div><div class="kpi-val b" id="s5">0</div></div>
+    </div>
+    <div class="card">
+      <div class="card-hd" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <span>&#128202; Summary breakdown</span>
+        <button class="btn btn-o btn-sm" onclick="exportSummaryExcel()" style="font-size:11px">&#11015; Export Excel</button>
+      </div>
+      <!-- View toggle -->
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <button class="sum-view-btn active" id="svb-item" onclick="setSumView('item',this)">&#128230; Item-wise</button>
+        <button class="sum-view-btn" id="svb-supplier" onclick="setSumView('supplier',this)">&#128666; Supplier-wise</button>
+        <button class="sum-view-btn" id="svb-customer" onclick="setSumView('customer',this)">&#128101; Customer-wise</button>
+      </div>
+      <div class="tb-wrap">
+        <table class="sum-tb" id="sum-main-table">
+          <thead id="sum-thead"></thead>
+          <tbody id="stbody"><tr><td colspan="4" class="empty">No entries</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN PAGE -->
+  <div class="page" id="page-admin">
+    <div class="card">
+      <div class="card-hd">&#10133; Add new employee</div>
+      <div class="add-user-form">
+        <div class="fg">
+          <div class="fl"><label>Full name</label><input type="text" id="nu-name" placeholder="Employee name"></div>
+          <div class="fl"><label>Username</label><input type="text" id="nu-user" placeholder="login username" autocomplete="off"></div>
+          <div class="fl"><label>Password</label><input type="password" id="nu-pass" placeholder="Set password" autocomplete="new-password"></div>
+          <div class="fl"><label>Role</label>
+            <select id="nu-role">
+              <option value="staff">Staff (can add entries)</option>
+              <option value="admin">Admin (full access)</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:10px">
+          <label style="font-size:12px;font-weight:700;color:#555;display:block;margin-bottom:6px">Company access</label>
+          <div class="co-access" id="nu-co-access"></div>
+        </div>
+        <button class="btn btn-p" style="margin-top:14px" onclick="addUser()">&#10003; Add Employee</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-hd">&#128100; All employees</div>
+      <div id="user-list"></div>
+    </div>
+    <div class="card">
+      <div class="card-hd">&#9881; Company names</div>
+      <div class="fg" style="margin-bottom:14px">
+        <div class="fl"><label>Company 1 (Blue)</label><input type="text" id="cname0" placeholder="Reckitt"></div>
+        <div class="fl"><label>Company 2 (Green)</label><input type="text" id="cname1" placeholder="Shahnaz"></div>
+        <div class="fl"><label>Company 3 (Red)</label><input type="text" id="cname2" placeholder="MT"></div>
+        <div class="fl"><label>Company 4 (Purple)</label><input type="text" id="cname3" placeholder="Reckitt - Burrabazar"></div>
+        <div class="fl"><label>Company 5 (Teal)</label><input type="text" id="cname4" placeholder="Shahnaz Burrabazar"></div>
+        <div class="fl"><label>Company 6 (Brown)</label><input type="text" id="cname5" placeholder="Fog"></div>
+      </div>
+      <button class="btn btn-p btn-sm" onclick="saveCoNames()">&#10003; Save names</button>
+    </div>
+    <div class="card">
+      <div class="card-hd">&#10024; Custom products added by staff</div>
+      <div id="custom-prod-list" style="font-size:13px;color:#555">Loading...</div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav" id="bottom-nav">
+    <button class="bnav active" id="nav-add" onclick="goPage('add',this)"><span class="ico">&#43;&#9711;</span>Add</button>
+    <button class="bnav" id="nav-reg" onclick="goPage('reg',this)"><span class="ico">&#128203;</span>Register</button>
+    <button class="bnav" id="nav-sum" onclick="goPage('sum',this)"><span class="ico">&#128200;</span>Summary</button>
+    <button class="bnav" id="nav-admin" onclick="goPage('admin',this)" style="display:none"><span class="ico">&#128272;</span>Admin</button>
+  </div>
+
+</div><!-- /app -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+// LocalStorage wrappers to patch missing helper references
+function load(key){
+  try { var v = localStorage.getItem(key); return v ? JSON.parse(v) : []; } catch(e){ return []; }
+}
+function save(key, val){
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch(e){}
+}
+
+// ── Per-company product lists ──
+var COMPANY_PRODUCTS = {
+  0: ["Airick Refil Kros 250ml(330)", "Airick Refil Mlav 250ml(330)", "Airick Refil Ncit 250ml(330)", "Airwick Fmc 250ml(599)", "Arw Fmc Ncit 250ml - (599) 6pk", "CHB LIQ BLK 75ML (138)", "CHB WAX BLK 40GM (98) 216PK", "CHB WAX DTAN 40GM (98) 216PK", "CHERRY WAX BLACK 15GM (54) 432PK", "CHERRY WAX D-TAN 15GM (54) 432PK", "COLIN 250ML(79) 48PK", "COLIN 500ML (120) 25PK", "COLIN REF REG 1LTR(197)", "Colin Pump 500ml(93)", "D'COLD TOTAL 4*6 BLISTER (93.48)", "DETOL 550ML (235.46)", "DETTAL LHW 675ML SKC (109) 16PK", "DETTOL 1 LTR (364.55)", "DETTOL ANITISEPTIC 1LIQ(401)16PK", "DETTOL ANTI LIQ 1 LTR (485.20)(454.87)16PK", "DETTOL ANTI LIQ 250ML (170)(159.37)60 PK", "DETTOL ANTI LIQ 550ML(259)(242.81)30PK", "DETTOL ANTI LIQ550ML(284.90)(267.09)30PK", "DETTOL ANTI LIQUID 60ML (41.49) 200PK", "DETTOL ANTI. LIQ 1LTR(441.10)(413.53)16PK", "DETTOL ANTISEPTIC LIQ 1LT (401)", "DETTOL ANTISEPTIC LIQ. 60ML(36.59)", "DETTOL ANTISEPTIC LIQ. 60ML(40.24)(37.72)", "DETTOL BODYWASH ICY COOL 250ML(129)", "DETTOL BODYWASH LIME FRESH 250ML(129)", "DETTOL BODYWASH SKIN CARE 250ML(129)", "DETTOL HW 5 LTR(880)", "DETTOL HYG BATH 500ML(193)", "DETTOL LHW 175ML ( 50) 60PK", "DETTOL LHW 875ML ORG (149)", "DETTOL LHW ORG 175ML B2G1(140)", "DETTOL LHW ORG 175ML(2+1) (120)", "DETTOL LHW ORG 200 ML(79)", "DETTOL LHW ORG 210ML+ ORG 210ML(129)", "DETTOL LHW ORG 5LTR(800)", "DETTOL LHW ORG 650ML(99)", "DETTOL LHW ORG 875ML (155) 16PK", "DETTOL LHW ORG REFIL 180ML B1G1(90)24PK", "DETTOL LHW ORIGINAL 175ML B2G1 (126)", "DETTOL LHW PLT BG FLOW (10) 480PK", "DETTOL LHW PWDR 8G13PK (120) 40PK", "DETTOL LIQ  5LTR ( 2184.94)(2048.38) 4 PK", "DETTOL LIQ 125ML(88.57)(83.03)96pk", "DETTOL LIQ. 5LTR(1492.35)", "DETTOL LIQ. 5LTR(2253.21) 4PK", "DETTOL PLASTER JAR (300)(280)24pk", "DETTOL PLASTER JAR (310) 24PK", "DETTOL SAN 200ML (125) 48PK", "DETTOL SAN ORG 200ML(100)", "DETTOL SANITIZER 200ml (140)", "DETTOL SANITIZER 47ML (30) 96PK", "DETTOL SANITIZER 50ML (35) 96PK", "DETTOL SHAVING CREAM 60+30G (93)(82)144pk", "DETTOL SKINCARE H/W 875ML (155) 16PK", "DETTOL SOAP COOL 100*5G (185)(182)36pk", "DETTOL SOAP COOL 40GM(10) 400PK", "DETTOL SOAP ORG 100*5G (185)36PK", "DETTOL SOAP ORG 100GM*5 (195)(173.51)", "DETTOL SOAP ORG 100gm*5(182)", "DETTOL SOAP ORG 150GM (232)(206)30pk", "DETTOL SOAP ORG 150GM*4(217)", "DETTOL SOAP ORG 40G (10)(8.89)400PK", "DETTOL SOAP ORG 45GM (10) 360PK", "DLS ORG PUMP 180ML+180ML(99)", "DUR CON AIR 10S (324/-)", "DUR CON XTIME (269) 54PK", "DUREX  EXTRA DOT 3 S(99)", "DUREX  EXTRA DOT 3S (108/-) 162PKT", "DUREX  X-RIBBED 10S (295)", "DUREX  X-RIBBED 10S (324/-)", "DUREX AIR 3S (99)", "DUREX AIR 3S(90)", "DUREX BUBBLEGUM 3S(60) 162PK", "DUREX CHERRY LUBE 50ML(399)", "DUREX ELEVATE CAPSULE MEN (599) 24PK", "DUREX ELEVATE CLIMAX SPRAY (374) 24PK", "DUREX ELEVATE TABLET WOMEN (599) 24PK", "DUREX EXT DOT 3S (99)162PK", "DUREX EXTRA RIBBED 3S (99)162PK", "DUREX EXTRA THIN 10S(324) 54 PK", "DUREX EXTRA THIN 3S (108) 162 PK", "DUREX EXTRA THIN 3UN*27(99)162PK", "DUREX EXTRA TIME 3S (90)", "DUREX EXTRA TIME CONDOM (356)54PK", "DUREX FLAV BUBBLEGUM 2PIC (30)", "DUREX FLAV CHOCOLATE 2PIC (30)", "DUREX FLAV WILD STRAWBERRY 2PIC(30)", "DUREX INT-CHOCO 12S (198) 54PK", "DUREX INTENSE CHOCO 10S(216) 54PK", "DUREX INTENSE CHOCO 3S(60) 162PK", "DUREX INTENSE TINGLING LUBE 50ML(399)", "DUREX INVISIBLE 003 (199) 144 PK", "DUREX INVISIBLE 10S (650) 72PK", "DUREX INVISIBLE 10S(532)72PK", "DUREX INVISIBLE 10S(550)72PK", "DUREX INVISIBLE 3S(172)", "DUREX INVISIBLE 3S(180)", "DUREX LUBE STRAWBERRY 50ML(399)", "DUREX MUT CLIMAX 10S (478) 54PK", "DUREX MUTUAL CLIMAX 3S (159)", "DUREX MUTUAL CLIMAX CONDOM 10S (525) 54PK", "DUREX REAL FEEL 10S(599)", "DUREX REAL FEEL 3S(181)", "DUREX REAL FEEL 50ML(399)", "DUREX WILD STRAWBERRY 10S(216) 54PK", "DUREX X-DOT 10S (295) 54PK", "DUREX X-DOT 10S (324/-) 54PKT", "DUREX X-THIN 10S (295) 54PK", "DUREX X-TIME 10S (295) 54PK", "DUREX X-TIME UL THIN 10S (420) 72PK", "DUREX XTIME 3S(99)", "DUREX XTRA RIBBED 3S (108) 162 PK", "Detto LHW 175ML FREE WITH DTT SOAP", "Dettol 125 Ml(80.52)(75.48)96PK", "Dettol Anti Cream 30g Free", "Dettol Liq 125ml(73.20)", "Dettol Liq Org Sqzy 100ml(35)", "Dettol Liq. 250ml(140.54)", "Dettol Liq.125ml Free with Moov Gel 50gm", "Dettol Liq.60ml Free with Moov Gel 30gm", "Dettol Liquid 125ml Free", "Dettol Plaster 24s(250)", "Dettol Pouch Org 175ml(40)", "Dettol Pouch Org 175ml(42)", "Dettol Pump 200ml+175ml Pouch(99)", "Dettol Pump 900ml(149)", "Dettol Soap Cool 100Gmx5 (185)(164.62)", "Dettol Soap Org 45gm(10)400 PK", "Dettol Wipes Floral10's(49)", "Dettol Wipes Org 10's(49)", "Disprin Tablet 325mg 16PKT (270/-)(253.08)", "Disprin Tablet 325mg(90)", "Dur Con Xthn 3s (99)", "Durex Extra Time Condom 10S (324/-)", "Durex Naturals Lube 100ml (599) 12pk", "Durex Wild Strawberry 3s(60)", "Durexn Bubblegum 10s(198)", "Durexn Bubblegum 12S (216)", "FYBOGEL 100GM (171) 48PK", "FYBOGEL 100GM (210)(196.87)", "Fybogel Pwd Reg 100gm(143)", "GAVISCON LIQ 150M(196.46)(184.18)24pk", "GAVISCON LIQ PEPPERMINT 150ML (147.6)", "HARPIC BCL 500ML (115)", "HARPIC BCL FLO 1LTR(210)", "HARPIC BCL FLO 1LTR(230)", "HARPIC BCL FLO 500ML (120) 24PK", "HARPIC BCL FLORAL 250ML(58)", "HARPIC BCL LEM 1LT (230)", "HARPIC BCL LEM 200ML(63) 48PK", "HARPIC BCL LEMON 500ML (110)24PK", "HARPIC BCL LEMON 500ML (120) 24PK", "HARPIC BLEACH 500ML (115)", "HARPIC BLUE ORG 5LI (1149)*3", "HARPIC BLUE ORG 5LI (999)", "HARPIC FLUSH MATIC 50*3 (275)", "HARPIC FLUSH MATIC 50*5 (180)48PK", "HARPIC FLUSH MATIC 50GM*2(190) 48pkt", "HARPIC FLUSH TWIN 50gm*2(172)", "HARPIC PWR 200 ML ARW FREE WITH LIZOL  500 ML", "HARPIC PWR 200ML (46) 48PK", "HARPIC PWR 900ML (195)", "HARPIC PWR ORG 500ML(110)", "HRP ITC STISH CIT 50gm*2 (190)", "HRP PWD DRAIN CLEN 50GM (30) 240PK", "Harpic 200ml Free", "Harpic 200ml Free with Soap", "Harpic Blue 500ml(105)", "Harpic Blue 500ml(99)", "INDUCTION", "ITCH GUARD 20GM (117.60)(110.25)", "ITCH GUARD 20GM (119.64)(112.15)", "ITCH GUARD 20GM(71.10)", "ITCH GUARD 25GM (77.84)", "ITCH GUARD PLUS CRM 5GM(20)(18.75)", "ITCH GUARD PLUS CRM 5GM(20.34)(19.06)", "Itch Guard Cream 12gm(70.50)(66.09)", "Itch Guard Cream 12gm(71.72)(67.23)", "KOHINOOR EXT TIME 10S (119.70) 108PK", "KOHINOOR PINK 10S (96.30) 108PK", "KOHINOOR PINK 3S (31.70) 324PK", "KOHINOOR X-TIME 3S (38.70) 324PK", "KRACK CREAM 15GM(60)", "Krack Crm 25gm(95)", "LIZOL 2LTR CIT (492) 6PK", "LIZOL 2LTR CIT(510) 6pk", "LIZOL 5LTR CITRUS(1029)", "LIZOL 5LTR CITRUS(1129)", "LIZOL CIT 500ML (123)", "LIZOL CITRUS 200ML (48) 64PK", "LIZOL CITRUS 500ML (129) 24PK", "LIZOL DFC NEEM 500ML+30%EXT", "LIZOL SHAKTI AQUA 450ML (69)24PK", "LIZOL SHAKTI AQUA 900ML (135)16PK", "LIZOL SHAKTI ROSE 450ML (69) 24PK", "LIZOL SHAKTI ROSE 900ML (135) 16PK", "LYSOL CITRUS 975 (210)", "LYSOL CITRUS 975ML (249) 16PK", "LYSOL DFC LAVENDRA 2L+500ML FREE(6PK)", "LYZOL DFC CITRUS 200ML (45)", "LYZOL DFC CITRUS 200ML (49)", "Lyzol Floral 975ml(221)", "MOOV  SPRAY 80GM (329)", "MOOV 12*10GM(68)240PK", "MOOV 30 GM (5+1)(180)(168.75) 120PK", "MOOV COOL GEL 10GM(60)", "MOOV COOL GEL 5GM (225) 24PK", "MOOV COOL SPRAY 15GM(85)", "MOOV COOL SPRAY 35GM (186)", "MOOV CREAM 20GM (123) 240pk", "MOOV CREAM 20GM (132)", "MOOV CREAM REG 50GM (225)(210.94)", "MOOV CREAM REG 50GM (248)(232)", "MOOV CREAM REG 50GM (272)(255)", "MOOV CRM 10GM (66)(61)240PKT", "MOOV CRM 30GM (159) 120PK", "MOOV CRM 30GM (5+1) (175/-)(164.06)120PK", "MOOV CRM 30GM (5+1) (180) 120pk", "MOOV DICLO GEL 45G FREE", "MOOV OINTMENT 20GM (110)", "MOOV OINTMENT 75GM(269)(251.73) 96PK", "MOOV OINTMENT 75GM(296)(277)", "MOOV SPRAY 15GM (85)", "MOOV SPRAY 35G+15GM(186) 60PK", "MOOV SPRAY 35ML (180)(168) 60PK", "MOOV SPRAY 35ML (199)(186) 60PK", "MOOV SPRAY 50GM (230)(215)", "MOOV SPRAY 80GM(362)(339)60PK", "MOOV SPRAY ACTIVE 15 GM (75)", "MOOV SPRAY ACTIVE 15GM (90)(84)", "MOOV SPRAY ACTIVE 15GM (92) 144pk", "Min Cream Reg 100gm (81)", "Moov Advance Spray 55gm(149)", "Moov Cream 30g- 20Pack (900)", "Moov Cream 4gm+ 25%Free 736pcs(15)(14)", "Moov Cream 6GM (18) 736PK", "Moov Cream Regular 10gm( 60)(56)", "Moov Crm Reg 10gm(60)(56)", "Moov Crm Reg 30gm(125)", "Moov Gel 30gm+ Dettol Liq. 60ml Free(125)", "Moov Oinment 20gm (121) 240PK", "Moov Oinment 20gm (121)(113)", "Moov Spary Base 35gm+15gm (930)", "Moov Spray 50ml (233) 60PK", "Moov Spray 50ml(185)", "Moov Spray 80ml(240)", "Mortin  Vpr Tuls 35ml (62)", "RING GUARD 12G (90.03) (84.40)", "RING GUARD CREAM 20 G (96.80)", "RING GUARD CREAM 20G(128.83)", "RING GUARD CREAM 20GM (141.71)(132.84)", "RING GUARD CRM 12GM (99.03)(92.84)", "RING GUARD CRM 5GM (21.95)", "RING GUARD CRM 5GM (24.14)(22.63) 480PK", "RING GUARD CRM 5GM(16.50)", "ROBIN BLEACH LIQ. 500ML(79)", "ROBIN BLECH LIQ 200ML  (39) 48PK", "Ring Guard 12gm(61.50)", "Ring Guard Cream 20 G (117.13)", "SALSA TROLLY BAG", "STREPSIL DRY COUGH(624)  24", "STREPSILS ORANGE 128S JAR(420)(393)24pk", "STREPSILS ORANGE 128S JAR(420)NEW PACK", "Stopache Tab Reg(1053.60)(987.60)", "Stopache Tablet Regular (17.56)(16.46)", "Strepsils Org 288s (840) NEW", "Strepsils Org 288s (840)(787)12pk", "TEEPOL DSW 10KG (1429)", "TEEPOL DSW 10KG (1501)", "VAN PWD PLUS 30GM (15) 240PK", "VANISH  PWD PLUS 30GM(15)", "VANISH LIQ 400ML (149)", "VANISH LIQ 800ML (265) 18PK", "VANISH LIQ 800ML (279) 18PK", "VANISH LIQ OXI 400ML (140)", "VANISH LIQ OXI 400ML (155)", "VANISH PWD 400GM (250) 24PK", "VANISH PWD OXY 400GM*24(240)", "VEET  CREAM NORMAL (115) 144PK", "VEET CRM 15GM DRY (59) 144PK", "VEET CRM 30GM DRY (109) 144PK", "VEET CRM DRY 50GM (175)", "VEET CRM DRY 50GM (185) 144PK", "VEET CRM DRY 50GM(159) 72PK", "VEET CRM DRY COOL (115) 144 PK", "VEET CRM MIXED (109) 144 PK", "VEET CRM MIXED (115) 144 PK", "VEET CRM NOR 50GM (175)", "VEET CRM NOR 50GM (185) 144PK", "VEET CRM NOR 50GM+20% FREE 60GM (185) 144PK", "VEET CRM SEN (115) 144 PK", "VEET CRM SEN 50GM ( 159 ) 144PK", "VEET CRM SEN 50GM (175)", "VEET CRM SEN 50GM (185) 144pk", "VEET CRM SEN 50GM+20% FREE60GM (185) 144PK", "VEET CWS 20S DRY (280)24PK", "VEET CWS 20S NORMAL (280)24PK", "VEET CWS 20S SENS (280)24PK", "VEET CWS 8S DRY (129) 48PK", "VEET CWS 8S NORMAL(129) 48PK", "VEET CWS 8S SEN (129) 48PK", "VEET CWS DRY-20S(269) 24PK", "VEET CWS HANGER 8S MIX(460)", "VEET CWS SEN(269)", "VEET HR CREAM 15GM (59) 144PK", "Vanish Liquid Oxi 800ml (254)", "Vanish Pwd Oxy 400gm(260) 24PK", "Veet Crm 15gm(45)", "Veet Crm Nor 30gm(75)"],
+  1: ["24 CARAT GOLD SCRUB 100 GM (1578)(1450)(1550)", "24CT GOLD PREMIUM ANTI-AGE EXFO SCRUB (1650)", "5 Step Anti Tan Kit (275)", "5 Step Flower Power Kit (350)(375)", "5 Step Mixed Fruit Facial Kit (250)(275)", "5 Step Papaya Kit (250)(275)", "ARNICA HAIR OIL PLUS 500ML(1320)(1170)", "Anti Hair Fall Serum 40ml (699)(745)", "Anti Pigmentation Gel 40ml (790)(845)", "Ayurvedic Body Cleanser 100gm(Almond)(305)", "Ayurvedic Body Cleanser 100gm(Majorica)(305)(320)", "Ayurvedic Body Cleanser 100gm(OOD)(305)(320)", "BEAUTY BALM PLUS - ANTI -CREAM - 40 GM(520)(560)", "CHOCOLATE MINI KIT 10G*3(Crm+Mask+Scrub)(295)(310)", "CHOCOLATE NOURISHING CREAM 50 GM (599)(550)(585)", "CHOCOLATE REJUVENATING MASK 100 GM (550)(585)", "COFFEE BEAN (CHOCKLET) SCRUB 50 GM (550)(585)", "COLOURVEDA COMBO 100*2 FREE50G(420)", "COLOURVEDA NATURAL HAIR COLOUR 100 GM (200)(210)", "Colourveda Hair Colour100gm(Burgandy)(250)(260)", "DIAMOND HAIR SERUM 40ML (1050/-)", "DIAMOND KIT (CREAM+SCRUB+LOTION+MASK)  1070", "DIAMOND KIT 10G*4(CRM+SCRB+LOTION+MASK)(1099)(1190)", "DIAMOND KIT BIG(D.NOR CRM+MASK+MOON) (3790)(3240)", "DIAMOND KIT BIG(SCRUB+LOTION+MOON) (2998)(3240)", "DIAMOND MASK 50 GM (1895)(1620)", "DIAMOND PLUS REHYDRANT LOTION 40 GM(1499)(1620)", "DIAMOND PLUS SKIN NOURISING CREAM 40 Gm(1620)", "DIAMOND SCRUB 175gm (5120)(4260)", "DIAMOND SKIN NOURISHING CREAM40GM(1700)", "DIAMOND SKIN SERUM 40ML (1995/-)", "Desktop Computer", "Dettol Soap COOL 45gm(10)", "FAIR ONE PLUS FAIRNESS CREAM 50GM (85)(95)", "FL. PW EGYPTION LOTUS NOR CRM 40gm(1061)(975)(1045)", "FLOWER PWR HOLLYHOCK SKIN MASK 100gm(1210)(1295)", "GOLD KIT 10G*4 KIT(SCRUB,GEL,CRM, MASK)(1010)(1080)", "GOLD SKIN RADIANCE GEL 200 GM (9040)(9360)", "Glowone Natural Glow Cream Men 99/-", "Gold Beautifying Mask 100gm(1785)(1910)", "Gold Beautifying Mask 200 Gm (3255)(3370)(3500)", "Gold Kit (3929)(3610)(3865)", "Gold Scrub Free", "Gold Skin Radiance Gel 30+10gm(1825)(1955)(2050)", "HAIR TOUCH UP PLUS(BROWN)7.5GM(348)(335)", "HIMALAYAN HERB SNOW DAY CREEM 40 GM (975)(1055)", "HONEY HEALTH MUDMASK 100gm(702)(680)(750)", "HONEY INTENSIVE CREAM 40GM (566)(520)(550)", "Hair Serum 40ml (699)(761)(699)(750)", "Henna Precious Herb Mix 100*3gm(272)(250)(260)", "Henna Precious Herb Mix 100GM (130)", "Henna Precious Herb Mix 200*3gm (480)(510)", "Herbal Sindoor (Maroon) 09ml (130)(135)", "Herbal Sindoor (Red) 09ml (130)(135)", "Himalayan Herb Snow Night Cream 40gm (1045)", "JUST PAPAYA FACE WASH 50 GM(80)(130)", "LASER PRINTER HP 208W", "Locks 100ml (365)(385/-)", "MASK I 500GM (3290)(3405)(3455/-)", "MASK I PLUS 100gm (965/-)", "MASK I PLUS 100gm(952)(875)(935)", "Mardd Bhringraj-Brahmi Hair Oil 200 Ml 299/-", "Marrdd Bhringraj-Methi Hair Tonix 200ml 299/-", "Marrdd Face Pack 50gm 149/-", "Marrdd Face Wash 150gm 325/-", "Marrdd Face Wash 50gm 115/-", "Marrdd Hibicus-Jasmine Hair Conditioner 50gm 150/-", "Marrdd Walnut-Apricot Scrub 50 Gm 115/-", "Mass Pink Deo Women 120ml (189)(199/-)", "NEEM HAIR OIL 200 ML (520)(545)", "NEEM SKIN BALM 100gm(700)(735)", "NEEM SKIN CREAM PLUS 40gm(566)(520)(545)", "NEEM TURMERIC GERMICIDAL HAND WASH 200ML (149/-)", "OOOPS ACNE DAY GEL 25 GM (130)(135)", "OOOPS FACE WASH 50gm(130)(135)", "OXYGEN KIT(MASK+CREEM+KAJOL FREE) (935)(1010)", "OXYGEN MASK 150 GM (520)(560)", "OXYGEN PLUS SKIN BEAUTY MASK 500GM(1635)(1700)", "OXYGEN PLUS SKIN CREEM 50gm(452)(415)(450)", "OXYGEN SKIN CREAM 500gm(2884)(2650)(2760)", "P. P SKIN WHITENING TREATMENT FACIAL KIT(380)(375)", "P.P ANTI AGEING TREATMENT FACIAL KIT(380)(349)(375)", "P.P SIGNATURE FACIAL KIT (380)(375)", "P.P SKIN PIGMENTATION CTRL FACIALKIT S (375)(325)", "P.P.BIOHYDRATINGCLEANSER 400GM 1115/-(1195/-)", "PEARL MASK 100 GM (1208)(1110)(1175)", "PEARL MASK 500 GM (4027)(3700)(3810)", "PINK LOTUS 40 GM (975)(1061)(975)(1045", "PLANT STEMS REDENSIFYING SERUM 30 ML (2900)", "PLATINIUM CELLU SKIN RECH COMPLEX 40 GM(2890)(2655)", "PLATINIUM SKIN RECHARGE SERUM 40 ML (2720)(2960)", "PLATINIUM SKIN RECHARGE SERUM 40ml(2960)(2720)", "PLATINUM SKIN RECHARGE MASK 50gm(2814)(2585)", "PLATINUM SKN RECHARGE CLEANSER 40GM(2655)2890(2655)", "POT OF GOLD FOUNDATION 30GM (1415)(1300)", "PP 7STEP SKIN WHITENING KIT(3+1)(1125)", "PP EXFOLIATING DERMABRASIVE (1070)", "PRO PWR NOURISHING CREAM 400gm (1115)(1195)", "PRO PWR SKIN SOFTENING CREAM 400GM (1195)", "PRO.PWR AROMA THERAPY F.PACK 400GM (1195)", "PRO.PWR HAIR CLEANSER 1000 ML (762)(700)(740)", "PRO.PWR HAIR OIL 1000ml(700)(740)", "PRO.PWR SKIN TONIC 1000 ML (700)(740)", "PROF.PWR REHYDRANT MILK 1000ml(700)755", "PROF.PWR REHYDRANT MILK 500ML (360)(390)", "Pearl Cream 500 Gm(9270)(9550)", "Pearl Kit (PWP 100gm + PMP 100gm)(2384)(2190)(2320)", "Pearl Mini Kit(Cream10gm+Mask10gm)(473)(435)(460)", "Premium Purple Deo WOMEN 130ml (269)", "ROSEMARY THYME HAIR CONDITIONER 150gm (410)(430)", "S.H. NEEM AMLA-BRAHMI HAIR CLEANSER 200ML 449/-", "S.H. NEEM AMLA-BRAHMI HAIR OIL 200ML 449/-", "SH  HENNA PLUS 1000ML (2410)(2480)", "SH AMLA PLUS 200 ML(750)(665)", "SH CLEANSE 40gm (700)(740)(750)", "SH DEW PLUS 40gm(700)(735)", "SH FAIR PLUS CREEM 40gm (762)(700)(740)", "SH GLOW PLUS 40gm (750)(765/-)", "SH HAIR TOUCH UP PLUS (BLACK) 7.50gm(320)(335) (300", "SH MOIST PLUS 50 GM (392)(360)", "SH MOISTURE CREAM 180GM(2000)", "SH RINSE 200ML(735)(800)(735)", "SH ROSE PLUS 1000ML (2410)(2623)(2480)", "SH ROSE PLUS 200ml (710)(750)", "SH ROSE PLUS 200ml(773)(710)(750)", "SH SMOOTH PLUS 40gm(710)(760)(775)", "SH TEX PLUS 100GM(965/-)", "SH24 CRT GOLD PLUS ANTI EXFOSCRUB 200gm(2720)(2960)", "SHA BASE PLUS 40 GM (750)(795)(800)", "SHA BRIDE SINDOOR 2 GM (265)(280)", "SHA CARE 200gms (875)(920/-)", "SHA FACE - HERBAL POWDER 65 GM (810)(850)", "SHA FAIR SOAP 100gm (260)(230)", "SHA HAIR 200gm (875)(920)", "SHA HENNA PLUS 200 ML(745)(750)(665)", "SHA LIFE PLUS 500gm(5795)(6085/-)", "SHA LIFE PLUS 60GM MRP (735)(810/-)", "SHA LOCKS 200 ML (710)(750)(665)", "SHA LOCKS PLUS 1000ML(2480)(2200)", "SHA MOIST PLUS 500 GM (2900)", "SHA ROSE PLUS 100ML (365)(385/-)", "SHA SCRUB PLUS 25gm (465)", "SHA SCRUB PLUS 40 GM (710)(773)(745)", "SHA SCRUB PLUS 40 GM + NEEM TULSI FREE(745)", "SHA SCRUB PLUS 500 GM (5820)(5965)", "SHA SCRUB PLUS 500 GM (5965)", "SHA SHAVE 70gm (240)(261)(240)", "SHA TAJ 40gm(762)(700)(745)", "SHA TEX PLUS 500gm (3290)(3455/*)", "SHA TONE 200ml (710)(750)", "SHA TREAT ( THERMOHERB) 900 GM (1980)", "SHA ZEEMA 500Gm (5940)(6465)(5940)", "SHACOVER B B CREAM SPF-20(40 GM) (350)", "SHAEYES KAJAL -2gm (290)(305)", "SHAFAIR PLUS 25 GM(480/-)", "SHAMOIST PLUS 100gm (700)(770/-)", "SHAMOIST PREMIUM-50GM 395/-", "SHAMOIST PREMIUM100GM FREE SHAROSE50ML(770)", "SHASILK PLUS 40GM (700)(710)(750)", "SKIN CARE KIT A(LIFE60+TEX100+T/F 150)(1775)", "SKIN CARE KIT B(LIFE60+MASK I100+T/F150)(1670)(1775", "SKIN CARE KITC(LIFE60+MOIST100+OOD)(1580)", "SOFTENING SKIN WASH 200ml(479)(440)(460)", "SPF 25 WITH FREE SPF 20 (165) (175)", "SUN BLOCK 80GM (SPF 40) (245)", "Saffron Skin Serum 50ml(920)(965)", "Sha Blem 25gm (773)(710)", "Sha Clear 100ml (735)(770)", "Sha Clove 25gm (729)(670)", "Sha Grow 200ml (800)(735)(770)(785)", "Sha Moon 100ml FREE", "Sha Moon 100ml(735)(780/-)(790/-)", "Sha Moon 100ml(800)(790/-)", "Sha Smooth 05gm", "Sha Tone 100ml (365)(385/-)", "Sha Zeema 40 Gm (800)(735)(770/-)", "Shahnaz Hussain Neem-Turmeric Soap 75gm (49/-)", "Spf 60 Sun Block 100gm(455)(485)", "TULSI NEEM FACE WASH 150 GM(410)(430)", "TULSI NEEM FACEWASH 150G+50G SAFRON F/W FREE(430)", "Tulsi Neem Face Wash 150gm FREE", "Tulsi Neem Face Wash 50gm (135)(140)", "Tulsi Neem Face Wash 50gm FREE", "VEDAPHARMA_x000D_  PLANT STEM CELL_x000D_  UNDEREYE 1255/-", "VEET CRM MIXED (115) 144 PK", "VEGPEEL 350gms (2655)", "Vegetable Exfoliating Powder 350gm (999)(1070)", "WHITE WATER LILY LOTION 100 ML (1150)(1230/-)"],
+  2: ["ALASPAN AG SYRUP 100 ML (122)", "ALASPAN AM TABLERS (119.50)", "ALASPAN AM TABLERS (126)(118.12)_", "ALASPAN TABLETS Strip of 10 TA (171)(160.31)", "ARTH SLEEP SUPPORT GUMMIES 15 NOS (350)", "ARTH SLEEP SUPPORT GUMMIES 30 NOS (600) (534) (600)", "Alaspan Am Tablets Strip of 10 (82)", "Alaspan Am Tablets Strip of 10 (98.8)(92.62)", "Arth Brain Fog Aid 1x30c (500)", "Arth Electrolyte HYD LEMON (800)", "Arth Electrolyte HYD Lemon (600)", "Arth Electrolyte HYD Orange (40)", "Arth Electrolyte Hyd LEMON Ice Tea 10gm (25)", "Arth Fatigue Support Gummies (499)", "Arth Heart Health 1x30c(750)", "Arth Intimate Cream 30gm (300)", "Arth Intimate Cream 30gm (350)", "Arth Intimate Cream 5gm (75)", "Arth Intimate Cream 60gm (600)", "Arth Mood Support 1x30T (400)", "Arth Perimenopause Multi Symptom Support (999)", "Arth Tender Breast Support 1x60c (750)", "BAYER TONIC 250 ML (170)", "BAYER TONIC 250ML (225) (210.50)", "BAYER'S TONIC 250ML (186.50)", "BAYERS TONIC 250 ML (162)", "BECOZYM C FORTE TAB 21*20S (44)(41.25)", "BECOZYM C FORTE TAB 21*20S (48)(45)", "BECOZYM C FORTE TABS 15S (27.4)", "BECOZYM C FORTE TABS 15S (30.10)", "BECOZYM C FORTE TABS 21X20S (40.13)", "BONTRESS HAIR REVITALISING SHAMPOO 150ML (690)", "BONTRESS PRO + SCALP SERUM 30ML (849)", "BONTRESS PRO + SCALP SERUM 60ML(1500)", "Bayer Tonic 250ml  (162)", "Bayer Tonic 250ml (170) New", "Benadon Tablet 15t (50.50)(47.34)", "Benadon Tablets (41.85)", "Benadon Tabs 10s (23.13)", "Benadon Tabs 15s (41.85)", "Benadon Tabs 15s (46)(43.12)", "CALADRIL LOTION 125ML (106)", "CALADRIL LOTION 65ML (75)", "CALADRIL LOTION 65ML(67)", "CALADRYL LOTION 125 ML (119.61)", "CALADRYL LOTION 125 ML (97)", "CANDID 30GM CREAM (102.48) (96.08)", "CANDID ACTIV POWDER 100 GM (149)", "CANDID ACTIVE POWDER 100G (159) (141)", "CANDID CREAM 30 GM (100.80)", "CANDID CREAM 30 GM (108.53)", "CANDID CREAM 30 GM (98.11)", "CANDID CREAM 50 GM (168) (157.50)", "CANDID DUSTING POWDER 120GM (155)", "CANDID DUSTING POWDER 120GM (159)", "CANDID DUSTING POWDER 120GM (174) (163.13)", "CANDID DUSTING POWDER 250GM (260)", "CANDID DUSTING POWDER 250GM (273.5) (256.41)", "CANDID DUSTING POWDER 60 GM (104) (97.50)", "CANDID MEDICATED SOAP 125 GM (179)", "CANDID MEDICATED SOAP 125GM (214) (190.43)", "CANDID MEDICATED SOAP 75 GM (99)", "CANDID MULTI BENEFIT SOAP 125 GM (196)", "CANDID MULTI BENEFIT SOAP 75 GM (99) (88.09)", "CANDID RENEW POWDER 100 GM (129)", "CANESTEN CREAM 30G (100)(93.75)", "CANESTEN CREAM 30G IN (107.75)", "CANESTEN POWDER 1% 100GM (146)", "CANESTEN S CREAM 15G IN (107)", "CANESTEN S CREAM 15G IN (128.5)", "CANESTEN V6 TAB 6'S(58.25)(54.61)", "CANESTEN VAG CREAM 30 GM(95)", "CETAFRESH LIP BALM 10 GM (49)", "CETAFRESH MOISTURISING CREAM 100 GM (165)", "CETAFRESH MOISTURISING CREAM 50 GM (85)", "CIR PREMIUM ADULT DIAPERE L", "CLOCIP ADV ACTION PRICKLYHEAT 150GM (125) (117.18)", "CLOCIP ADV ACTION PRICKLYHEAT POWDER 150GM (99)", "CLOCIP L 10GM FREE", "CLOCIP PRICKLYHEAT POWDER 150GM (115)", "CLO_POSM GODREJ NO. 1 SOAP (FREE)", "COFSIL DROPS ASSRTD 205+5 JAR (192.18) (190.65)", "COFSILS DX 100 ML (110) (103.13)", "COFSILS MEDICATED COUGH SYRUP 100 ML (90)", "COFSILS MEDICATED COUGH SYRUP 100 ML (99) (92.81)", "Caladryl Lotion 125ml (Nanz) (116)(108.75)", "Caladryl Lotion 65ml Nanz (61.19)", "Candid Cream 50 Gm (170.24) (160.13)", "Candid Prickly Heat 120g (129.60)", "Candid Prick Heat 120g (144)", "Candid Prickly Heat 120g Sandal (120) (105.60)", "Candid Prickly Heat 120gm Menthol(120)", "Candid Prickly Heat Powder 120 Gm (120) (105.60)", "Candid Prickly Heat Powder Rose (120) (105.60)", "Candid Renew Powder 100gm (139) (123)", "Canestan V Cream (95) New(89.06)", "Canesten V Tab (58.25)(54.61)", "Cipladine 20gm Oint (59.24) (67.17)", "Cipladine Anticep Bandage 100+ 36 Strips (300)", "Cipladine Gargle 100ml (218.28)(204.63)", "Cipladine Ointment 10gm (35.13)(32.93)", "Cipladine Ointment 5% 30gm SRP (105.41) (98.82)", "Cipladine Powder 10gm (90.03) (84.40)", "Cipladine SOLN 100ml (48.99) (45.92)", "Cipladine Solution 5% 500ml (240.80) (225.75)", "Clocip 10gm Cream (150) (140.63)", "Clocip AF Powder 100gm (140) (131.25)", "Clocip AF Powder 75 Gm SHRINK (93) (87.18)", "Clocip AF Powder Regular 75gm  (95.62)", "Clocip B Cream 10g (65.48)", "Clocip Kz Soap 75gm (105) (93.43)", "Clocip Powder 100gm (119)", "Clocip Powder 100gm (130)", "Clocip Powder 75 Gm (79)", "Cofcils FRESH MINT Jar 22+2 (33)", "Cofcils GINGER LEMON Jar 23+1(35) (32.81)", "Cofcils Ginger Lemon Jar 200 (30)", "Cofcils Ginger Lemon Jar 22+2 (33)", "Cofcils Ginger Lemon Jar 220 (30) (28.13)", "Cofcils Ginger Lemon Jar 24+2 (38) (35.62)", "Cofcils ORANGE Jar 22+2 (33) (30.93)", "Cofcils ORANGE Jar 23+1 (35) (32.81)", "Cofcils ORANGE Jar 24+2 (38) (35.62)", "Cofcils Orange Jar 200 (30)", "Cofcils Orange Jar 220 (30)", "Cofsils Cough Drop 205+5Jar (190.65)", "Cofsils Dx 100ml (120) (112.50)", "Cofsils Dx 100ml (123.75)", "Cofsils Fresh Mint Jar 10+2 (38) (35.62)", "Cofsils Fresh Mint Jar 12's(35) (32.81)", "Cofsils Fresh Mint Jar 23+1(35)", "Cofsils Gargle (170) (159.38)", "Cofsils LEMON HONEY Jar 23+1 (33)", "Cofsils LEMON HONEY Jar 23+1 (35) (32.81)", "Cofsils LEMON HONEY Jar 24+2 (35.62)", "Cofsils Medicated Cough 100ml (101.25)", "Cofsils Mulethi 12s (35) (32.81)", "Cofsils Mulethi 12s (35.62)", "Cofsils Naturals Cough Syrup 100ml(82)", "Cofsils Naturals Cough Syrup 100ml(90) (84.37)", "Cofsils Tulsi Pudina Jar 10+2's (38) (35.62)", "Cofsils Tulsi Pudina Jar 12's (35) (32.81)", "Cofsils Tulsi Pudina Jar 12's (35.62)", "Cofsils Tulsi Pudina Jar 12S (33)", "D ACNE SOAP 75GM (289.50)", "D ACNE SOFT 100GM (460)", "D'ACNE FOAMING FACE WASH 60 ML (573)", "DACNE SOAP 75 GM (265) (266.25)", "DIGEPLEX 200ML (144)(135)", "DIGEPLEX READYMADE 200ML (167)(148.61)", "DIGEPLEX T TABLETS 10'S (163)(152.81)", "DRAIN CLEANER 50G (30)", "Digeplex 200ml (131.87)(123.62)", "Digeplex 200ml (173)(162.19)", "Digeplex Liq 200ml (158)(148.13)", "Digeplex Readymade 200ml (139)(123.68)", "Digeplex Readymade 200ml (152)(135.25)", "Digeplex T Tablets 10's (179)(167.81)", "EC-ELOVERA IMF CREAM 75G (495)", "ELOVERA CREAM 150GM (240)", "ELOVERA CREAM 75 GM (240)", "ELOVERA CREAM 75G (258)", "ELOVERA LOTION 150ML (396)", "ELOVERA MOISTURIZING  BODY WASH (625)", "ELOVERA PRO LOTION 100 GM (365)", "ENDURA MASS WEIGHT - BANANA 500GM (699) (621.99)", "ENDURA MASS WEIGHT GAINER- BANANA 500GM (625)", "ENDURA MASS WEIGHT GAINER- BANANA 500GM (679)", "ENDURA MASS WEIGHT GAINER- BANANA 500GM CONS  (649)", "ENDURA MASS WEIGHT VANILLA 500GM (699) (621.99)", "ENDURA MASS WG- CHO 500GM CONS PROMO (679) (604.19)", "ENDURA MASS WG- CHOCOLATE 500GM CONS PROMO (699)", "ENDURA MASS WG- VANILLA 500GM CONS PROMO (649)", "ENDURA MASS WG- VANILLA 500GM CONS PROMO (679)", "EPISOFT AC SPF 50+ 50G (899)", "ERTH SLEEP SUPPORT GUMMMIES 15 NOS (350)", "EVA AURA ON GAS PERFUME SPRAY 120ML (225)", "EVA AURA ON GAS PERFUME SPRAY 120ML (250)", "EVA Aura & Charm Spray 240ml (500)", "EVA CHARM NO GAS PERFUME SPRAY 120ML (225)", "EVA CHARM NO GAS PERFUME SPRAY 120ML (250)", "EVA Charm No Gas Mandrine Orange & Cashmiwood (225)", "EVA DEOSPRAY 125ML - FRESH SPLASH (160)", "EVA DEOSPRAY 125ML - WILD SPICY (160)", "EVA DEOSPRAY 150ML - DOLL MAGIC  (200)", "EVA DEOSPRAY 150ML - DOLL MAGIC  (225)", "EVA No Gas Perfume Sp Aura & Charm Pack of 2 (450)", "EVA SHINE DEO ROLL ON 50ML (190)", "EVA TALC 100 GM  FANTASY BUY 1 GET 1 (95)(84.53)", "EVA TALC 100G FRESH  BUY 1 GET 1 (95)(84.53)", "EVA TALC 100G MYSTIQUE BUY 1 GET 1 (95)(84.53)", "EVA TALC 100G SWEET BUY 1 GET 1 (95)(84.53)", "EVA TALC 400G FRESH  WITH  PANTEEN SHAMPOO (240)", "EVA TALC 400G MYST PAN SHAMPOO 75M (240)(213.56)", "Elovera Cream 150gm (360)", "Em Banana Flavour 550g (829) (737.66)", "Endura Mass  Chocolate 500gm (749) (666.48)", "Endura Mass Banna 500gm (749) (666.48)", "Endura Mass Vanilla 500gm (749) (666.48)", "Episoft AC 75gm (678)", "Episoft Ac 125gm (935)", "Episoft Ac125gm (875)", "Episoft Ac125gm (899)", "Episoft Ac75gm (639)", "Episoft Cleansing Lotion 125ml (450)", "Episoft Cleansing Lotion 250 Ml (600)", "Episoft Oc Gel 125 Ml (550)", "Episoft Oc Gel 125 Ml (600)", "Eva Shine Deo Roll on 25ml (95)", "Eva Soft Deo Roll On 25ml (95)", "Eva Spalsh Deo Roll on 25ml (95)", "Eva Undearm Roll on Deo Combo 75ml (285)", "G Home Odour Remover 130gm Aq Fresh (185)", "GALACT GRANULE 200 GM Chocolate (421) (390)", "GALACT GRANULE 200 GM KESAR (421)(390)", "GALACT GRANULE 200GM ELACHI (421) (390)", "GALACT GRANULE 400 GM CHOCOLATE (799) (749)", "GALACT GRANULE 400 GM ELACHI (799) (749)", "GALACT GRANULE 600 GM Chocolate (1099) (1030)", "GALACT GRANULES 400 GM KESAR (799) (749)", "GALACT PLUS LACTATION BAR 20G (65)", "GALACT PLUS MOMS NUTRIBAR 1X20G (60)", "GALACT Plus Powder 400gm Choco(749)", "GALACT Powder 400gm Choco Hazelnut (700)", "GH Divine Harmony Spray Pack  2*160ml (360)", "GH Lavender Room & Air Spray 2*130ml (350)", "GH ROOM FRESHNER 130G DIVINE 50G FREE (175)", "GH ROOM FRESHNER 130G DIVINE 50G FREE (180)", "GH ROOM FRESHNER 130G FLORAL 50G FREE (175)", "GH ROOM FRESHNER 130G Harmony 50G FREE (180)", "GH ROOM FRESHNER 130G JASMINE 50G FREE (175)", "GH ROOM FRESHNER 130G LEMON 50G FREE(175)", "GH ROOM FRESHNER 130G MUBARAKA 50G FREE(175)", "GH ROOM FRESHNER 130G SANDAL 50G FREE (175)", "GH ROOM FTRSHNER 130G LAVENDER 50G FREE(175)", "GH ROOM FTRSHNER 130G ROSE 50G FREE(175)", "GOOD HOME AIR FRESHNER 50G FLORAL (55)", "GOOD HOME AIR FRESHNER 50G JASMINE (55)", "GOOD HOME AIR FRESHNER 50G ROSE (55)", "GOOD HOME AIR FRESHNER LAVENDER  50G (55)", "Hair 4 U Conditioner 100gm (525)", "Hair 4 U Shampoo 100ml (410)", "I FEEL WASH 100ML(175)", "I Know Pregnancy Test KIT (56.25)", "I PILL (75.35)", "I PILL DAILY (60)", "I-CAN (36S) (FREE)(55) (51.56)", "I-Can Prega Test(55)", "I-Know Ovulution Strip(549)(514.68)", "I-Pill (110)", "IPILL DAILY (59.50)", "LA SHIELD FISICO SUNSCREEN GEL  50G (750)", "LA SHIELD INTENSE BODY LOTION 100 G (299)", "LA SHIELD IR GEL 60 GM  (930)", "LA SHIELD IR GEL 60 GM  (951)", "LA SHIELD IR GEL 60GM (981)_", "LA SHIELD LITE ANTI TANING SUNSRN GEL SPF 30 (980)", "LA SHIELD LITE GEL SPF 50+50 GM (980)", "LA SHIELD SUNSCREEN GEL 50 GM SPF 40 (790)", "LA SHIELD SUNSCREEN GEL 50 GM SPF 40 (810)", "LA SHIELD SUNSCREEN GEL SPF 40 50G (850)", "LA SHIELD URBAN PORT SPF50-50 (340)", "LA SHIELD URBAN PROT SPF50-50GM(320)", "LA-SHIELD INTENSE HYDRA CREAM 100G (550)", "LACTO CALAMINE DAILY FACIAL WIPES (150)", "LACTO CALAMINE DAILY SUNSHIELD (349)", "LACTO FW 100ML (120)", "LASHIELD EXPERT URBAN PORT SPORT 80 GM (996)", "LASHIELD EXPERT URBAN PROT SPORT 50 GM (699)", "LASHIELD FISICO MATTE SUNCREENGEL 50 G (650)", "LASHIELD FISICO MATTE SUNCREENGEL 50 G (699)", "LC CHARCOAL FACEWASH 100G (199)", "LC Charcoal FW 50ml + Free Wipes Combo (99)", "LC FACE WASH NEEM & ALOE (199)", "LC Face Lotion Aloe 120ml (295)", "LC Face Lotion Aloe 60ml (150)", "LC Face Lotion Aloe 60ml (165)", "LC Face Lotion CTNS 120ml (295)", "LC Face Lotion Oily Skin 30ml (85)", "LC Face Lotion Oily Skin 30ml (90)", "LC Face Lotion Oily Skin 60ml (165)", "LC Face Lotion With SPF 120ml (75)", "LC Facewash Wash Detox 100ml (199)", "LC Kaolin FW 50ml + Free Wipes Combo (99)", "LC New Sunscreen Non CP 50g (399)", "LC Oil Cleansing Wipes 30's (99)", "LC Refresshing Wipes 25's (150)", "LC SUNSCREEN 50 GM (349)", "LC Sunscreen SPF30 Non CP 50g (299)", "LC VITAMIN C FACEWASH 100G (199)", "LC Vitamin C FW 50ml + Free Wipes Combo (99)", "LITTLE'S DIAPERS - NB 40S (449)(420.93)", "LITTLES COMFY PANT JUMBO STANDARD S(40) (399)(374)", "LITTLES COMFY PANTS JUMBO NB 40 (449)", "LITTLES COMFY PANTS SUPER JUMBO M(72)(1149)(1077)", "LITTLES COMFY PANTS SUPER JUMBO S(78)(1149)(1077)", "LITTLES COMFY PANTS SUPER JUMBO XL(54)(1149)(1077)", "LITTLES DIAPERS M 32S (449)(420.94)", "LITTLES DIAPERS- (L) 30S (449)(420.93)", "LITTLES DIAPERS- (S) 42S (429)(402.18)", "LITTLES DIAPERS- (S) 42S (449)(420.93)", "LITTLES DIAPERS- XL 24S (449)(420.93)", "LITTLES WIPES 80 (PACK OF 2)(220)", "La Shield Urban Prot Spf 40 50gm (250)", "La Shield Urban Prot Spf 40 50gm (275)", "La Shield Urban Prot Spf 50 50gm (280)", "La Shield Urban Prot Spf 50 50gm (299)", "Lacrtocalamine Kaolin Clay Face Wash (120)", "Lacto Alo0vera 120ml(260)", "Lacto Aloe 60ML (150)", "Lacto Alovera 30ML (80)", "Lacto Alovera 60ML (150)", "Lacto Calamine Sheet Mask _Hyaluronic (75)", "Lacto Calamine Sheet Mask_Green Tea (75)", "Lacto Calamine Sheet Mask_Vitamin C (75)", "Lacto Calamine Ubtan Facewash 100gm (249)", "Lacto OB Oily Skin 30ML (75)", "Lacto OB Oily Skin 30ML (80)", "Lacto Oil Control Aloevera OB 120ml(220)", "Lacto Oil Control OB Normal Skin120ml(295)", "Lacto Oil Control OB Oily Skin 60ML (140)", "Lacto Oil Control OB Oily Skin 60ML (150)", "Lacto Oil Control OB Oily Skin 60ML (165)", "Lacto Oil Control OB Oily Skin120ml(220)", "Lacto Oil Control OB Oily Skin120ml(240)", "Lacto Oil Control OB Oily Skin120ml(295)", "Lashield Kids Sunscreen 50g (599)", "Life Digeplex T Tablets Sale(148.8)", "Little's Baby Wipes 80's(190)", "Littles Comfy Pants Super Jumbo L(62) (1149)(1077)", "Littles Diaper M32 (429)(402.18)", "Littles's Diapers - L 30s (429)", "MSCHIEF  TREMOLO (1799) (1687) (1680)", "MSCHIEF CRESCENDO (3548) (3540)", "MSCHIEF ELECTRO (3260)", "MSCHIEF ELECTRO (3499) (3268)", "MSCHIEF VIRTUOSO (4799)", "Maxirich Gold 7's Cartoon (75)", "Maxirich Gold BOTTLE PACK OF 30 (310) (275.84)", "Maxirich Mineral Gold (340) (302.54)", "Maxirich Mineral Mv (280) (249.15)", "Maxirich Mineral Mv (310) (275.84)", "Maxirich Multivitamin (119) (105.89)", "Maxrich Multivitamin Mineral Sofgels (129) (114.78)", "Maxrich Multivitamin Softgel (387) (344.30)", "Mscheif Rock N Roll (4202)", "Mschief Maestro (6070)(6499)", "Mschief Minim (2699)", "NASELIN 0.05% 10ML (77.50) (72.66)", "NASELIN 0.05% 10ML (85.20) (79.87)", "NASELIN NASAL SPRAY (84)", "NASELIN NASAL SPRAY 10 ML(92.40) (86.62)", "NATUROLAX A 110GM (170)", "NATUROLAX A 110GM (185)", "NATUROLAX A 110GM (195)", "NATUROLAX A 110GM (200)", "NATUROLAX A 300G (450)", "NATUROLAX A-300GM (419)", "NICOGUM 2 MG SUGAR FREE (99)", "NICOGUM 4 MG SUGAR FREE (115)", "NICOTEX BIG LOZ MINT PLUS 1MG (90)", "NICOTEX BIG LOZ MINT PLUS 2MG (94.61)", "NICOTEX CHARCOAL MOUTHWASH 250ML (250)", "NICOTEX GUM FRUIT BURST 2 MG (91)", "NICOTEX GUM FRUIT BURST 4 MG (113.94)", "NICOTEX GUM MINT PLUS BIG TIN 4MG 40S (429)", "NICOTEX GUM ULTRA MINT 2 MG (91)", "NICOTEX GUM ULTRA MINT 2 MG (92.58)", "NICOTEX GUM ULTRA MINT 4MG  (113.94)", "NICOTEX GUM ULTRA MINT 4MG (112)", "NICOTEX NICOTINE PATCH 14MG 1S PACK (99.86)", "NICOTEX STAIN REMOVAL TOOTHPASTE 100G (250)(222.45)", "Naselin 0.05% 10 Ml (64.13)", "Naselin Nasal Spary 10ml (101.60) (95.25)", "Naselin Saline Spray 20ml (46)", "Naselin Saline Spray 20ml (50.60) (47.43)", "Naselin Saline Spray 20ml (55.60) (52.12)", "Naturolax-A 300gm (381)", "NaturolaxA 110gm(155)", "New Saridon Tablet 10's (50)", "New Saridon Tablet 10's (55) (51.55)", "Nicogum Freshmint 2mg - 12 Gums (121)", "Nicogum Freshmint 2mg - 12 Gums (123.10)", "Nicogum Freshmint 4mg - 12 Gums (150)", "Nicogum Freshmint 4mg - 12 Gums (152.61)", "Nicotex 2mg Mint Plus Tin 30s (293)", "Nicotex 2mg Mint Plus Tin 30s (298.09)", "Nicotex 2mg Paan Tin 29's (288.94)", "Nicotex 4mg Mint Plus Tin (360)", "Nicotex 4mg Mint Plus Tin (366.26)", "Nicotex Gum Fruit Brust 2mg (92.58)", "Nicotex Gum Ultramint 2mg (93.18)", "Nicotex Gums 2mg Mint Plus Tin 44s (405)", "Nicotex Gums 2mg Mint Plus Tin 44s (412.04)", "Nicotex Gums 2mg Mint Plus Tin 44s (414.71)", "Nicotex Gums 4mg Mint Plus Tin 44s (500.56)", "Nicotex Gums 4mg Mint Plus Tin 44s (503.81)", "Nicotex Mint Plus  2mg 12gums KS Promo (121)", "Nicotex Mint Plus 2mg (101)", "Nicotex Mint Plus 2mg 12gums (121)", "Nicotex Mint Plus 2mg 12gums (123.10)", "Nicotex Mint Plus 2mg 12gums (123.89)", "Nicotex Mint Plus 4mg 12gums (150)", "Nicotex Mint Plus 4mg SF (152.61)", "Nicotex Mint Plus Tin 2mg (284)", "Nicotex Mint Plus Tin 4mg (348)", "Nicotex Mint Plus Tin 4mg - KS Promo (348)", "Nicotex Nicotine Patch 14gm 7s(699)", "Nicotex Nicotine Patch 7mg 7s(599)", "Nicotex Nicotinepatch 21mg 7s(825)", "Nicotex PAAN Plus 2mg 12gums (123.89)", "Nicotex Paan 2mg  12 Gum (123.10)", "Nicotex Paan 2mg (92)", "Nicotex Paan 2mg 12gums (121)", "Nicotex Paan 2mg 12gums KS Promo (121)", "Nicotex Paan 4mg (115)", "Nicotex Paan 4mg 12gums (150)", "Nicotex Paan 4mg 12gums KS Promo 3+1 (150)", "Nicotex Paan 4mg SF (152.61)", "OMNI ORTHO OIL (295)_", "OMNIGEL 100 GM (286) (268.12)", "OMNIGEL 100GM (314.60) (294.93)", "OMNIGEL 10gm (65.30)", "OMNIGEL 10gm (67.34)", "OMNIGEL 10gm(65.30) (61.21)", "OMNIGEL 20 GM (104.06)", "OMNIGEL 20 GM (94.60)", "OMNIGEL 20GM (114.50) (107.34)", "OMNIGEL 20GM (125.90) (118.03)", "OMNIGEL 30 GM (133.10)", "OMNIGEL 30GM (161.04) (150.97)", "OMNIGEL 50 GM (179.08)", "OMNIGEL 50GM (203.12)", "OMNIGEL 75 GM (254.10)", "OMNIGEL 75 GM (307.45) (288.23)", "OMNIGEL ACTIVE ORTHO OIL (295) (276.56)", "OMNIGEL ACTIVE ROLL ON (100) (93.75)", "OMNIGEL ACTIVE SPRAY 35 G (149) (139.68)", "OMNIGEL ACTIVE SPRAY 55 G (199) (186.56)", "OMNIGEL SPRAY 100 GM (295.90)", "OMNIGEL SPRAY 100 GM (325.49) (305.14)", "OMNIGEL SPRAY 2% 35GM DOUBLE POWER (150.04) (140.66", "OMNIGEL SPRAY 20 GM (110.47) (103.56)", "OMNIGEL SPRAY 20 GM (121.51) (113.91)", "OMNIGEL SPRAY 35 GM (131.28)", "OMNIGEL SPRAY 35 GM (144.4) (135.38)", "OMNIGEL SPRAY 55 GM (217.80) (204.18)", "OMNIGEL SPRAY 55 GMS (239.58) (224.60)", "OMNIGEL SPRAY 75 GM (248.05)", "OMNIGEL SPRAY 75 GM (300.13) (281.37)", "ORS (Cipla) Aam Paana (32.04)", "ORS (Cipla) Orange 200ml (32.04)", "ORS (Cipla) Orange 200ml (32.24)", "ORS (Cipla) PROLYTE APPLE LIQUID 200ML (31.5)", "ORS (Cipla) PROLYTE APPLE(32.57)", "ORS (Cipla) PROLYTE MIXED FRUIT TETRA 200ML (31.5)", "ORS (Cipla) PROLYTE NIMBU PAANI  200ML (29.4)", "ORS (Cipla) PROLYTE NIMBU PAANI 200ML (31.50)", "ORS (Cipla) PROLYTE ORANGE 200 ML (29.40)", "ORS (Cipla) PROLYTE ORANGE 200 ML (31.50)", "ORS (Cipla) Prolyte 21gm Orange (21.82)", "ORS (Cipla) Prolyte 21gm Orange (24.46)", "ORS (Cipla) Prolyte Apple (32.04)", "ORS (Cipla) Prolyte Apple (32.24)", "ORS (Cipla) Prolyte Mixed Fruit (32.04)", "ORS (Cipla) Prolyte Mixed Fruit (32.24)", "ORS (Cipla) Prolyte Nimbu Pani (32.04)", "ORS (Cipla) Prolyte Nimbu Pani (32.24)", "ORS Prolyte  Orange 21gm (22.26)", "ORS Prolyte  Orange 21gm (22.40)", "ORS(CIPLA) PROLYTE MIXED FRUIT 200ML(31.50)", "Omni Balm 8 Ml (40) (37.50)", "Omnigel 15gm Gel (85)", "Omnigel Maxstrong  30gm (167)", "Omnigel Spray 1*100gm (358.03)(335.65)", "Omnigel Spray 2% 55gms (259.54) (243.31)", "Omnigel Spray 2% 55gms (267.64)", "Omnigel Spray 75gm (272.90) (255.83)", "Our Daily Vitc Zn (69)", "POLARAMINE TABLETS 2MG 350S (24.70)", "POLYCROL 200ML (150)(140.62)", "POLYCROL 450ML (217)", "POLYCROL 450ML Orange (238)(223.13)", "POLYCROL CHW TAB MINT 15S (24)(22.5)", "POLYCROL ORANGE 200 ML (135)(126.56)", "POLYCROL ORANGE 200 ML (148)(138.75)", "POLYCROL ORANGE 200 ML (162)(151.87)", "POLYCROL ORANGE 450ML (198)(185.62)", "PROLYTE REHYDRATE APPLE 200ML (35)", "Paracip Disperser 650mg 15's (34.27) (32.13)", "Paracip Drops*15ml (40) (37.50)", "Paracip Syrup 60ml (24.86) (23.31)", "Polaramine Tablets (2mg) 350s (20.50)", "Polycrol 200ml (PH) (173)(162.19)", "Polycrol 200ml Orange (173) (162.19)", "Polycrol 450ml (PH) (261)(244.69)", "Polycrol 450ml(198)", "Polycrol Orange 450ml (217)", "Polycrol Xpress Relief Orange 450ml (203.44)", "Prolyte Ors Pineapple Tetra 200 Ml (31.50)", "Reverzo ANTI-ACNE Facewash 100 Gm (199)", "Reverzo Charcoal Facewash 100 Gm (199)", "SARIDON ADVANCE TAB 12*10S (53)(49.68)", "SARIDON WOMEN TAB (50) (46.50)", "SCALP + SHAMPOO 75ML (344.40)", "SCALP PLUS SHAMPOO 150ML (595) (558)", "SCALP PLUS SHAMPOO 150ML (639) (599.07)", "SCALP PRO SHAMPOO 200ML (380) (338)", "SCALPE + SHAMPOO 75ML (335.50)", "SCALPE ANTIHAIRFALL SHAMPOO 200 ML (280)", "SCALPE PRO HAIR SERUM 30ML (999)", "SCALPE PRO SHAMPOO 100ML (199)", "SCALPE PRO SHAMPOO 100ML (209) (185)", "SKORE ALOE VERA NATURAL LUBES 50ML (300)", "SKORE BANANA FLAVRD COL.DOT WITH EXT.LUB (40)", "SKORE DESSERT 10PK*24 (200)", "SKORE EGGSTACY (700)", "SKORE OH PLEASURE GEL 15ML WOMEN (500)", "SKORE STRAWBERRY FLA.COL.DOT WITH EX.LUB (120)", "SKORE THRILLS (800)(748)", "SKORE VIBHER (2500)(2343.8)(2335)", "SKORE ZIGZAG 10PK x 24IN (180)", "ST_SKORE COOL WATERMELON 10 S (190)", "SUPRADYN DAILY (66.35)", "SUPRADYN DAILY (72.95)(68.39)", "SUPRADYN DAILY (FREE)  (60.35)(56.78)", "SUPRADYN DAILY 60'S (285) (267)", "SUPRADYN DAILY TABLETS 60S BOTTLE (239)(224.06)", "SUPRADYN DAILY(60.35)(56.58)", "SUPRADYN IMMUNITY (95)", "SUPRADYN IMMUNITY 10IN (95)(84.53)", "SUPRADYN IMMUNITY 30IN (270)(240.25)", "Saridon Advance (49)", "Saridon Advance Tablets 12 x 10's (58)(54)", "Saridon Advance Tablets 12 x 10's (59)", "Saridon Tab 20's MONOCARTON - (46.50)", "Saridon Tab 20's MONOCARTON - (50.00)(46.88)", "Scalp + Shampoo 75ml (353) (330.94)", "Scalpe Antihairfall Shampoo 200ml (300)", "Scalpe Antihairfall Shampoo 200ml (300)(266)", "Scalpe Plus Shampoo 75ml (280)", "Scalpe Plus Shampoo 75ml (295)", "Scalpe Plus Shampoo 75ml (306.50) (287.34)", "Scalpe Plus Shampoo 75ml (323)", "Scalpe Plus Shampoo 75ml (336) (315)", "Scalpe Plus Shampoo 75ml (353) (330.94)", "Scalpe Pro Shampoo 100ml (195)", "Scalpe Pro Shampoo 100ml (220) (195)", "Scalpe Pro Shampoo 200ml (360) (320)", "Scalpe Pro Shampoo 400ml (616)", "Scalpe Pro Shampoo 400ml (720) (640)", "Skore Armor (1860)", "Skore Armor (1999) (1867)", "Skore Eggstacy (746) (745)", "Skore Eggstacy (799)", "Skore HUSH 3Pk*80 IN (100)", "Skore Hard Rock Gel 30ml (500)", "Skore OH Stimulant Lubes 50ml (400)", "Skore Shades with 1500 + Raised Dots 10s (120)", "Skore Skin Fit 10pk*24 (250)", "Skore Skin Fit 3pk*80 (100)", "Skore Teasher (1541) (1540)", "Skore Vibrating Ring - Shiver (600)", "Soak Shield Adult Diaper Pant Xl (655.31)", "Soak Shield Audult Diaper Pant L (608.43)", "Soak Shield Audult Diaper Pant M (561.56)", "TE-SKORE CHOCOLATE FLA.COL.DOT WITH EXT.LUB (120)", "TE-SKORE CHOCOLATE FLA.COL.DOT WITH EXT.LUB (135)", "TE-Skore Vibrating Ring -Buzz (2750) (2568) (2560)", "TETMOSOL DUSTING POWDER (109)", "TETMOSOL DUSTING POWDER (119)", "TE_AFR 75G (BUY 2 GET 1 FREE) (170)", "TE_EVA DEOSPRAY 150ML - BLUSH (200)", "TE_EVA DEOSPRAY 150ML - DOLL MAGIC  (200)", "TE_EVA DEOSPRAY 150ML - FRESH SPLASH (200)", "TE_EVA DEOSPRAY 150ML - SWEET BOUQUET (200)", "TE_EVA DEOSPRAY 150ML - URBANE (200)", "TE_EVA DEOSPRAY 150ML - WILD SPICY (200)", "TE_EVA SOFT DEO ROLL ON 50ML (190)", "TE_EVA Splash  DEO ROLL ON 50ML (190)", "TE_EVA TALC 50G FRESH (45)(40.04)", "TE_GH Afr 10g (Aroma Perf) Jasmine (60)", "TE_GH Afr 10g (Aroma Perf) Lavender (60)", "TE_GH Afr 10g (Aroma Perf) Lemon (60)", "TE_GH Afr 10g (Aroma Perf) Rose (60)", "TE_GH Afr 10g (Aroma Perf) Strawbery (60)", "TE_GH Afr 10g (Aroma Perf) Tangy Orange (60)", "TE_SKORE BANANA FLAVRD COL.DOT WITH EXT.LUB (120)", "TE_SKORE BLUE 3S (30)", "TE_SKORE BLUES EXT.LUBRI.WITH VANILLA SCENT (90)", "TE_SKORE CHERRY FLAVRD COL.DOT WITH EXT. LUB (120)", "TE_SKORE CHERRY FLAVRD COL.DOT WITH EXT. LUB (45)", "TE_SKORE CHOCOLATE 3S (40)", "TE_SKORE COOL MINT 10S (120)", "TE_SKORE DOTS WITH 1500+RAISED DOTS (30)", "TE_SKORE DUO MAX 10PK*24(300) _x000D_", "TE_SKORE FLAVOURS 20S (220)", "TE_SKORE LUBES CHOCOLATE 50ML (300)", "TE_SKORE LUBES STRAWBERRY 50 ML(300)", "TE_SKORE NOTOUT CLIMAX DELAY COL &  DOT 20PK (220) _x000D_", "TE_SKORE NOTOUT CLIMAX DELAY COL &  DOT 20PK (250)", "TE_SKORE NOTOUT CLIMAX DELAY COL&DOT 10PKX2 (120)", "TE_SKORE NOTOUT CLIMAX DELAY COL&DOT 10PKX2 (135)", "TE_SKORE NOTOUT CLIMAX DELAY COL&DOT 10PKX2 (150)", "TE_SKORE ORANGE FLAVRD COL.DOT WITH EXT.LUB(120)", "TE_SKORE ORANGE FLAVRD COL.DOT WITH EXT.LUB(135)", "TE_SKORE ORANGE WITH 1500+ RAISED (40)", "TE_SKORE PINACOLADA 10S (120)", "TE_SKORE PINACOLADA 3S (40)", "TE_SKORE SHADES 20S  (220)", "TE_SKORE SHADES 3S (40)", "TE_SKORE SKINTHIN 10PK x 24IN(180)", "TE_SKORE STRAWBERRY FLA.COL.DOT WITH EX.LUB (120)", "TE_SKORE STRAWBERRY FLA.COL.DOT WITH EX.LUB (135)", "TE_SKORE TIMELESS 10PK x 24IN(180)", "TE_Skore Dots 10S (120)", "TE_Skore Lubes Cherry Flavoured 50ml (300)", "TE_Skore Lubes Cool Sensation 50ml (300)", "TE_Skore Lubes Warm Sensation 50 Ml(300)", "TE_Skore Nothing Chocolate 10s(150) _x000D_", "TE_Skore Nothing Climax Delay 10s(150)", "TE_Skore Nothing Strawberry 10s(150) _x000D_", "TE_Skore Oh Pleasure Gel for Women 15ML (800) _x000D_", "TE_Skore Pheromone Activating Pack of 2 (600)", "TE_Skore Pheromone Activating Spray for Eros (300)", "TE_Skore Teaser (1541)", "TE_Skore Vibrating Ring - Buzzz(2500) (2343.8)", "TE_Skore Vibrating Ring - Shiver (600)", "TE_Skore Vibrating Ring - Shiver (650)(607)", "TE_Skore Vibrating Ring - Vybes (1600)(1495)", "TE_VEA DEO SPRAY 125ML  GROVE (160)", "TE_Woodwards Gripes Water 130ml (60)(56.25)", "TE_Woodwards Gripes Water 130ml (62)", "TE_Woodwards Gripes Water 130ml (65)", "TE_Woodwards Gripes Water 130ml (65)(60.94)", "TE_Woodwards Gripes Water200ml (100)", "TE_Woodwards Gripes Water200ml (100) (95)", "TE_Woodwards Gripes Water200ml (90) (84.38)", "TUGAIN  2% KETOCNAZOLE SHAMPO 100 M (305) (285.93)", "Te_skore Nothing Climex Delay 3pk x 80 (50)", "Tetmosol ICY COOL Soap-75gm(75)", "Tetmosol Soap-100gm (108)(96.1)", "Tetmosol Soap-100gm(92)", "Tetmosol Soap-100gm(95)", "Tetmosol Soap-100gm(99)", "Tugain Anti Dandruff Shampo 200ml (444.91)", "Tugain Hairfall Shampo 200ml (355.93)", "Unfold Chocolate Condom 3's(30)", "Unfold Chocolate Dotted Condom 10s (90)", "Unfold Extend Time 3's (40)", "Unfold Extended Time (120)", "Unfold Strawberry Condom 10's (90)", "Unfold Very Thin Condom 10's (150)", "Unfold Very Thin Condom 3's (50)", "Unobiotic Junior (48)", "VICCO POWDER 100 G (125)(118)", "VICCO POWDER 50GM (78)(74)", "VICCO TURM WSO CREAM 30G (70)(66)", "VICCO TURM WSO CREAM 30G (75)(71)", "VICCO TURM WSO CREAM 30G (80) (75)", "VICCO TURMERIC CREAM 15G Narayani (80)(75)", "VICCO TURMERIC CREAM 30GM (145)(136)", "VICCO TURMERIC CREAM 30GM (150)(141)", "VICCO TURMERIC CREAM 50GM (222)(209)", "VICCO TURMERIC CREAM 50GM (230)(216)", "VICCO TURMERIC CREAM 70GM (275)(258)", "VICCO TURMERIC CREAM 70GM (285)", "VICCO TURMERIC CREAM 70GM (285)(268)", "VICCO VAJRADANI SF PASTE 80gm (73)(69)", "VICCO VAJRADANTI PASTE 100G (82)", "VICCO VAJRADANTI PASTE 100G (90)", "VICCO VAJRADANTI PASTE 100G (90)(85)", "VICCO VAJRADANTI PASTE 200GM (144)", "VICCO VAJRADANTI PASTE 200GM (150) (141)", "VICCO VAJRADANTI PEST 160G DALCHI (108)", "VICCO VAJRADANTI POWDER 50G (74)(70)", "VICCO VAJRADANTI SAUN FLV 80 GM (40)", "VICCO VAJRADANTI SF PASTE 80G (70)", "Vicco Alo Facewash 100gm (170)", "Vicco Paste 200gm Saunf (155 )", "Vicco SF Paste 160gm (125)", "Vicco Turmeric Aloe Vera Skin Cream 15g. 360p (65)", "Vicco Turmeric Face Wash 70g (99)", "Vicco Turmeric Face Wash 70g 60p (110)", "Vicco Turmeric Wso Skin Cream 60g (185)(174)", "Vicco Wso Cream 15gm (35)(33)"],
+  3: ["Airick Refil Kros 250ml(330)", "Airick Refil Mlav 250ml(330)", "Airick Refil Ncit 250ml(330)", "Airwick Fmc 250ml(599)", "Arw Fmc Ncit 250ml - (599) 6pk", "CHB LIQ BLK 75ML (138)", "CHB WAX BLK 40GM (98) 216PK", "CHB WAX DTAN 40GM (98) 216PK", "CHERRY WAX BLACK 15GM (54) 432PK", "CHERRY WAX D-TAN 15GM (54) 432PK", "COLIN 250ML(79) 48PK", "COLIN 500ML (120) 25PK", "COLIN REF REG 1LTR(197)", "Colin Pump 500ml(93)", "D'COLD TOTAL 4*6 BLISTER (93.48)", "DETOL 550ML (235.46)", "DETTAL LHW 675ML SKC (109) 16PK", "DETTOL 1 LTR (364.55)", "DETTOL ANITISEPTIC 1LIQ(401)16PK", "DETTOL ANTI LIQ 1 LTR (485.20)(454.87)16PK", "DETTOL ANTI LIQ 250ML (170)(159.37)60 PK", "DETTOL ANTI LIQ 550ML(259)(242.81)30PK", "DETTOL ANTI LIQ550ML(284.90)(267.09)30PK", "DETTOL ANTI LIQUID 60ML (41.49) 200PK", "DETTOL ANTI. LIQ 1LTR(441.10)(413.53)16PK", "DETTOL ANTISEPTIC LIQ 1LT (401)", "DETTOL ANTISEPTIC LIQ. 60ML(36.59)", "DETTOL ANTISEPTIC LIQ. 60ML(40.24)(37.72)", "DETTOL BODYWASH ICY COOL 250ML(129)", "DETTOL BODYWASH LIME FRESH 250ML(129)", "DETTOL BODYWASH SKIN CARE 250ML(129)", "DETTOL HW 5 LTR(880)", "DETTOL HYG BATH 500ML(193)", "DETTOL LHW 175ML ( 50) 60PK", "DETTOL LHW 875ML ORG (149)", "DETTOL LHW ORG 175ML B2G1(140)", "DETTOL LHW ORG 175ML(2+1) (120)", "DETTOL LHW ORG 200 ML(79)", "DETTOL LHW ORG 210ML+ ORG 210ML(129)", "DETTOL LHW ORG 5LTR(800)", "DETTOL LHW ORG 650ML(99)", "DETTOL LHW ORG 875ML (155) 16PK", "DETTOL LHW ORG REFIL 180ML B1G1(90)24PK", "DETTOL LHW ORIGINAL 175ML B2G1 (126)", "DETTOL LHW PLT BG FLOW (10) 480PK", "DETTOL LHW PWDR 8G13PK (120) 40PK", "DETTOL LIQ  5LTR ( 2184.94)(2048.38) 4 PK", "DETTOL LIQ 125ML(88.57)(83.03)96pk", "DETTOL LIQ. 5LTR(1492.35)", "DETTOL LIQ. 5LTR(2253.21) 4PK", "DETTOL PLASTER JAR (300)(280)24pk", "DETTOL PLASTER JAR (310) 24PK", "DETTOL SAN 200ML (125) 48PK", "DETTOL SAN ORG 200ML(100)", "DETTOL SANITIZER 200ml (140)", "DETTOL SANITIZER 47ML (30) 96PK", "DETTOL SANITIZER 50ML (35) 96PK", "DETTOL SHAVING CREAM 60+30G (93)(82)144pk", "DETTOL SKINCARE H/W 875ML (155) 16PK", "DETTOL SOAP COOL 100*5G (185)(182)36pk", "DETTOL SOAP COOL 40GM(10) 400PK", "DETTOL SOAP ORG 100*5G (185)36PK", "DETTOL SOAP ORG 100GM*5 (195)(173.51)", "DETTOL SOAP ORG 100gm*5(182)", "DETTOL SOAP ORG 150GM (232)(206)30pk", "DETTOL SOAP ORG 150GM*4(217)", "DETTOL SOAP ORG 40G (10)(8.89)400PK", "DETTOL SOAP ORG 45GM (10) 360PK", "DLS ORG PUMP 180ML+180ML(99)", "DUR CON AIR 10S (324/-)", "DUR CON XTIME (269) 54PK", "DUREX  EXTRA DOT 3 S(99)", "DUREX  EXTRA DOT 3S (108/-) 162PKT", "DUREX  X-RIBBED 10S (295)", "DUREX  X-RIBBED 10S (324/-)", "DUREX AIR 3S (99)", "DUREX AIR 3S(90)", "DUREX BUBBLEGUM 3S(60) 162PK", "DUREX CHERRY LUBE 50ML(399)", "DUREX ELEVATE CAPSULE MEN (599) 24PK", "DUREX ELEVATE CLIMAX SPRAY (374) 24PK", "DUREX ELEVATE TABLET WOMEN (599) 24PK", "DUREX EXT DOT 3S (99)162PK", "DUREX EXTRA RIBBED 3S (99)162PK", "DUREX EXTRA THIN 10S(324) 54 PK", "DUREX EXTRA THIN 3S (108) 162 PK", "DUREX EXTRA THIN 3UN*27(99)162PK", "DUREX EXTRA TIME 3S (90)", "DUREX EXTRA TIME CONDOM (356)54PK", "DUREX FLAV BUBBLEGUM 2PIC (30)", "DUREX FLAV CHOCOLATE 2PIC (30)", "DUREX FLAV WILD STRAWBERRY 2PIC(30)", "DUREX INT-CHOCO 12S (198) 54PK", "DUREX INTENSE CHOCO 10S(216) 54PK", "DUREX INTENSE CHOCO 3S(60) 162PK", "DUREX INTENSE TINGLING LUBE 50ML(399)", "DUREX INVISIBLE 003 (199) 144 PK", "DUREX INVISIBLE 10S (650) 72PK", "DUREX INVISIBLE 10S(532)72PK", "DUREX INVISIBLE 10S(550)72PK", "DUREX INVISIBLE 3S(172)", "DUREX INVISIBLE 3S(180)", "DUREX LUBE STRAWBERRY 50ML(399)", "DUREX MUT CLIMAX 10S (478) 54PK", "DUREX MUTUAL CLIMAX 3S (159)", "DUREX MUTUAL CLIMAX CONDOM 10S (525) 54PK", "DUREX REAL FEEL 10S(599)", "DUREX REAL FEEL 3S(181)", "DUREX REAL FEEL 50ML(399)", "DUREX WILD STRAWBERRY 10S(216) 54PK", "DUREX X-DOT 10S (295) 54PK", "DUREX X-DOT 10S (324/-) 54PKT", "DUREX X-THIN 10S (295) 54PK", "DUREX X-TIME 10S (295) 54PK", "DUREX X-TIME UL THIN 10S (420) 72PK", "DUREX XTIME 3S(99)", "DUREX XTRA RIBBED 3S (108) 162 PK", "Detto LHW 175ML FREE WITH DTT SOAP", "Dettol 125 Ml(80.52)(75.48)96PK", "Dettol Anti Cream 30g Free", "Dettol Liq 125ml(73.20)", "Dettol Liq Org Sqzy 100ml(35)", "Dettol Liq. 250ml(140.54)", "Dettol Liq.125ml Free with Moov Gel 50gm", "Dettol Liq.60ml Free with Moov Gel 30gm", "Dettol Liquid 125ml Free", "Dettol Plaster 24s(250)", "Dettol Pouch Org 175ml(40)", "Dettol Pouch Org 175ml(42)", "Dettol Pump 200ml+175ml Pouch(99)", "Dettol Pump 900ml(149)", "Dettol Soap Cool 100Gmx5 (185)(164.62)", "Dettol Soap Org 45gm(10)400 PK", "Dettol Wipes Floral10's(49)", "Dettol Wipes Org 10's(49)", "Disprin Tablet 325mg 16PKT (270/-)(253.08)", "Disprin Tablet 325mg(90)", "Dur Con Xthn 3s (99)", "Durex Extra Time Condom 10S (324/-)", "Durex Naturals Lube 100ml (599) 12pk", "Durex Wild Strawberry 3s(60)", "Durexn Bubblegum 10s(198)", "Durexn Bubblegum 12S (216)", "FYBOGEL 100GM (171) 48PK", "FYBOGEL 100GM (210)(196.87)", "Fybogel Pwd Reg 100gm(143)", "GAVISCON LIQ 150M(196.46)(184.18)24pk", "GAVISCON LIQ PEPPERMINT 150ML (147.6)", "HARPIC BCL 500ML (115)", "HARPIC BCL FLO 1LTR(210)", "HARPIC BCL FLO 1LTR(230)", "HARPIC BCL FLO 500ML (120) 24PK", "HARPIC BCL FLORAL 250ML(58)", "HARPIC BCL LEM 1LT (230)", "HARPIC BCL LEM 200ML(63) 48PK", "HARPIC BCL LEMON 500ML (110)24PK", "HARPIC BCL LEMON 500ML (120) 24PK", "HARPIC BLEACH 500ML (115)", "HARPIC BLUE ORG 5LI (1149)*3", "HARPIC BLUE ORG 5LI (999)", "HARPIC FLUSH MATIC 50*3 (275)", "HARPIC FLUSH MATIC 50*5 (180)48PK", "HARPIC FLUSH MATIC 50GM*2(190) 48pkt", "HARPIC FLUSH TWIN 50gm*2(172)", "HARPIC PWR 200 ML ARW FREE WITH LIZOL  500 ML", "HARPIC PWR 200ML (46) 48PK", "HARPIC PWR 900ML (195)", "HARPIC PWR ORG 500ML(110)", "HRP ITC STISH CIT 50gm*2 (190)", "HRP PWD DRAIN CLEN 50GM (30) 240PK", "Harpic 200ml Free", "Harpic 200ml Free with Soap", "Harpic Blue 500ml(105)", "Harpic Blue 500ml(99)", "INDUCTION", "ITCH GUARD 20GM (117.60)(110.25)", "ITCH GUARD 20GM (119.64)(112.15)", "ITCH GUARD 20GM(71.10)", "ITCH GUARD 25GM (77.84)", "ITCH GUARD PLUS CRM 5GM(20)(18.75)", "ITCH GUARD PLUS CRM 5GM(20.34)(19.06)", "Itch Guard Cream 12gm(70.50)(66.09)", "Itch Guard Cream 12gm(71.72)(67.23)", "KOHINOOR EXT TIME 10S (119.70) 108PK", "KOHINOOR PINK 10S (96.30) 108PK", "KOHINOOR PINK 3S (31.70) 324PK", "KOHINOOR X-TIME 3S (38.70) 324PK", "KRACK CREAM 15GM(60)", "Krack Crm 25gm(95)", "LIZOL 2LTR CIT (492) 6PK", "LIZOL 2LTR CIT(510) 6pk", "LIZOL 5LTR CITRUS(1029)", "LIZOL 5LTR CITRUS(1129)", "LIZOL CIT 500ML (123)", "LIZOL CITRUS 200ML (48) 64PK", "LIZOL CITRUS 500ML (129) 24PK", "LIZOL DFC NEEM 500ML+30%EXT", "LIZOL SHAKTI AQUA 450ML (69)24PK", "LIZOL SHAKTI AQUA 900ML (135)16PK", "LIZOL SHAKTI ROSE 450ML (69) 24PK", "LIZOL SHAKTI ROSE 900ML (135) 16PK", "LYSOL CITRUS 975 (210)", "LYSOL CITRUS 975ML (249) 16PK", "LYSOL DFC LAVENDRA 2L+500ML FREE(6PK)", "LYZOL DFC CITRUS 200ML (45)", "LYZOL DFC CITRUS 200ML (49)", "Lyzol Floral 975ml(221)", "MOOV  SPRAY 80GM (329)", "MOOV 12*10GM(68)240PK", "MOOV 30 GM (5+1)(180)(168.75) 120PK", "MOOV COOL GEL 10GM(60)", "MOOV COOL GEL 5GM (225) 24PK", "MOOV COOL SPRAY 15GM(85)", "MOOV COOL SPRAY 35GM (186)", "MOOV CREAM 20GM (123) 240pk", "MOOV CREAM 20GM (132)", "MOOV CREAM REG 50GM (225)(210.94)", "MOOV CREAM REG 50GM (248)(232)", "MOOV CREAM REG 50GM (272)(255)", "MOOV CRM 10GM (66)(61)240PKT", "MOOV CRM 30GM (159) 120PK", "MOOV CRM 30GM (5+1) (175/-)(164.06)120PK", "MOOV CRM 30GM (5+1) (180) 120pk", "MOOV DICLO GEL 45G FREE", "MOOV OINTMENT 20GM (110)", "MOOV OINTMENT 75GM(269)(251.73) 96PK", "MOOV OINTMENT 75GM(296)(277)", "MOOV SPRAY 15GM (85)", "MOOV SPRAY 35G+15GM(186) 60PK", "MOOV SPRAY 35ML (180)(168) 60PK", "MOOV SPRAY 35ML (199)(186) 60PK", "MOOV SPRAY 50GM (230)(215)", "MOOV SPRAY 80GM(362)(339)60PK", "MOOV SPRAY ACTIVE 15 GM (75)", "MOOV SPRAY ACTIVE 15GM (90)(84)", "MOOV SPRAY ACTIVE 15GM (92) 144pk", "Min Cream Reg 100gm (81)", "Moov Advance Spray 55gm(149)", "Moov Cream 30g- 20Pack (900)", "Moov Cream 4gm+ 25%Free 736pcs(15)(14)", "Moov Cream 6GM (18) 736PK", "Moov Cream Regular 10gm( 60)(56)", "Moov Crm Reg 10gm(60)(56)", "Moov Crm Reg 30gm(125)", "Moov Gel 30gm+ Dettol Liq. 60ml Free(125)", "Moov Oinment 20gm (121) 240PK", "Moov Oinment 20gm (121)(113)", "Moov Spary Base 35gm+15gm (930)", "Moov Spray 50ml (233) 60PK", "Moov Spray 50ml(185)", "Moov Spray 80ml(240)", "Mortin  Vpr Tuls 35ml (62)", "RING GUARD 12G (90.03) (84.40)", "RING GUARD CREAM 20 G (96.80)", "RING GUARD CREAM 20G(128.83)", "RING GUARD CREAM 20GM (141.71)(132.84)", "RING GUARD CRM 12GM (99.03)(92.84)", "RING GUARD CRM 5GM (21.95)", "RING GUARD CRM 5GM (24.14)(22.63) 480PK", "RING GUARD CRM 5GM(16.50)", "ROBIN BLEACH LIQ. 500ML(79)", "ROBIN BLECH LIQ 200ML  (39) 48PK", "Ring Guard 12gm(61.50)", "Ring Guard Cream 20 G (117.13)", "SALSA TROLLY BAG", "STREPSIL DRY COUGH(624)  24", "STREPSILS ORANGE 128S JAR(420)(393)24pk", "STREPSILS ORANGE 128S JAR(420)NEW PACK", "Stopache Tab Reg(1053.60)(987.60)", "Stopache Tablet Regular (17.56)(16.46)", "Strepsils Org 288s (840) NEW", "Strepsils Org 288s (840)(787)12pk", "TEEPOL DSW 10KG (1429)", "TEEPOL DSW 10KG (1501)", "VAN PWD PLUS 30GM (15) 240PK", "VANISH  PWD PLUS 30GM(15)", "VANISH LIQ 400ML (149)", "VANISH LIQ 800ML (265) 18PK", "VANISH LIQ 800ML (279) 18PK", "VANISH LIQ OXI 400ML (140)", "VANISH LIQ OXI 400ML (155)", "VANISH PWD 400GM (250) 24PK", "VANISH PWD OXY 400GM*24(240)", "VEET  CREAM NORMAL (115) 144PK", "VEET CRM 15GM DRY (59) 144PK", "VEET CRM 30GM DRY (109) 144PK", "VEET CRM DRY 50GM (175)", "VEET CRM DRY 50GM (185) 144PK", "VEET CRM DRY 50GM(159) 72PK", "VEET CRM DRY COOL (115) 144 PK", "VEET CRM MIXED (109) 144 PK", "VEET CRM MIXED (115) 144 PK", "VEET CRM NOR 50GM (175)", "VEET CRM NOR 50GM (185) 144PK", "VEET CRM NOR 50GM+20% FREE 60GM (185) 144PK", "VEET CRM SEN (115) 144 PK", "VEET CRM SEN 50GM ( 159 ) 144PK", "VEET CRM SEN 50GM (175)", "VEET CRM SEN 50GM (185) 144pk", "VEET CRM SEN 50GM+20% FREE60GM (185) 144PK", "VEET CWS 20S DRY (280)24PK", "VEET CWS 20S NORMAL (280)24PK", "VEET CWS 20S SENS (280)24PK", "VEET CWS 8S DRY (129) 48PK", "VEET CWS 8S NORMAL(129) 48PK", "VEET CWS 8S SEN (129) 48PK", "VEET CWS DRY-20S(269) 24PK", "VEET CWS HANGER 8S MIX(460)", "VEET CWS SEN(269)", "VEET HR CREAM 15GM (59) 144PK", "Vanish Liquid Oxi 800ml (254)", "Vanish Pwd Oxy 400gm(260) 24PK", "Veet Crm 15gm(45)", "Veet Crm Nor 30gm(75)"],
+  4: ["24 CARAT GOLD SCRUB 100 GM (1578)(1450)(1550)", "24CT GOLD PREMIUM ANTI-AGE EXFO SCRUB (1650)", "5 Step Anti Tan Kit (275)", "5 Step Flower Power Kit (350)(375)", "5 Step Mixed Fruit Facial Kit (250)(275)", "5 Step Papaya Kit (250)(275)", "ARNICA HAIR OIL PLUS 500ML(1320)(1170)", "Anti Hair Fall Serum 40ml (699)(745)", "Anti Pigmentation Gel 40ml (790)(845)", "Ayurvedic Body Cleanser 100gm(Almond)(305)", "Ayurvedic Body Cleanser 100gm(Majorica)(305)(320)", "Ayurvedic Body Cleanser 100gm(OOD)(305)(320)", "BEAUTY BALM PLUS - ANTI -CREAM - 40 GM(520)(560)", "CHOCOLATE MINI KIT 10G*3(Crm+Mask+Scrub)(295)(310)", "CHOCOLATE NOURISHING CREAM 50 GM (599)(550)(585)", "CHOCOLATE REJUVENATING MASK 100 GM (550)(585)", "COFFEE BEAN (CHOCKLET) SCRUB 50 GM (550)(585)", "COLOURVEDA COMBO 100*2 FREE50G(420)", "COLOURVEDA NATURAL HAIR COLOUR 100 GM (200)(210)", "Colourveda Hair Colour100gm(Burgandy)(250)(260)", "DIAMOND HAIR SERUM 40ML (1050/-)", "DIAMOND KIT (CREAM+SCRUB+LOTION+MASK)  1070", "DIAMOND KIT 10G*4(CRM+SCRB+LOTION+MASK)(1099)(1190)", "DIAMOND KIT BIG(D.NOR CRM+MASK+MOON) (3790)(3240)", "DIAMOND KIT BIG(SCRUB+LOTION+MOON) (2998)(3240)", "DIAMOND MASK 50 GM (1895)(1620)", "DIAMOND PLUS REHYDRANT LOTION 40 GM(1499)(1620)", "DIAMOND PLUS SKIN NOURISING CREAM 40 Gm(1620)", "DIAMOND SCRUB 175gm (5120)(4260)", "DIAMOND SKIN NOURISHING CREAM40GM(1700)", "DIAMOND SKIN SERUM 40ML (1995/-)", "Desktop Computer", "Dettol Soap COOL 45gm(10)", "FAIR ONE PLUS FAIRNESS CREAM 50GM (85)(95)", "FL. PW EGYPTION LOTUS NOR CRM 40gm(1061)(975)(1045)", "FLOWER PWR HOLLYHOCK SKIN MASK 100gm(1210)(1295)", "GOLD KIT 10G*4 KIT(SCRUB,GEL,CRM, MASK)(1010)(1080)", "GOLD SKIN RADIANCE GEL 200 GM (9040)(9360)", "Glowone Natural Glow Cream Men 99/-", "Gold Beautifying Mask 100gm(1785)(1910)", "Gold Beautifying Mask 200 Gm (3255)(3370)(3500)", "Gold Kit (3929)(3610)(3865)", "Gold Scrub Free", "Gold Skin Radiance Gel 30+10gm(1825)(1955)(2050)", "HAIR TOUCH UP PLUS(BROWN)7.5GM(348)(335)", "HIMALAYAN HERB SNOW DAY CREEM 40 GM (975)(1055)", "HONEY HEALTH MUDMASK 100gm(702)(680)(750)", "HONEY INTENSIVE CREAM 40GM (566)(520)(550)", "Hair Serum 40ml (699)(761)(699)(750)", "Henna Precious Herb Mix 100*3gm(272)(250)(260)", "Henna Precious Herb Mix 100GM (130)", "Henna Precious Herb Mix 200*3gm (480)(510)", "Herbal Sindoor (Maroon) 09ml (130)(135)", "Herbal Sindoor (Red) 09ml (130)(135)", "Himalayan Herb Snow Night Cream 40gm (1045)", "JUST PAPAYA FACE WASH 50 GM(80)(130)", "LASER PRINTER HP 208W", "Locks 100ml (365)(385/-)", "MASK I 500GM (3290)(3405)(3455/-)", "MASK I PLUS 100gm (965/-)", "MASK I PLUS 100gm(952)(875)(935)", "Mardd Bhringraj-Brahmi Hair Oil 200 Ml 299/-", "Marrdd Bhringraj-Methi Hair Tonix 200ml 299/-", "Marrdd Face Pack 50gm 149/-", "Marrdd Face Wash 150gm 325/-", "Marrdd Face Wash 50gm 115/-", "Marrdd Hibicus-Jasmine Hair Conditioner 50gm 150/-", "Marrdd Walnut-Apricot Scrub 50 Gm 115/-", "Mass Pink Deo Women 120ml (189)(199/-)", "NEEM HAIR OIL 200 ML (520)(545)", "NEEM SKIN BALM 100gm(700)(735)", "NEEM SKIN CREAM PLUS 40gm(566)(520)(545)", "NEEM TURMERIC GERMICIDAL HAND WASH 200ML (149/-)", "OOOPS ACNE DAY GEL 25 GM (130)(135)", "OOOPS FACE WASH 50gm(130)(135)", "OXYGEN KIT(MASK+CREEM+KAJOL FREE) (935)(1010)", "OXYGEN MASK 150 GM (520)(560)", "OXYGEN PLUS SKIN BEAUTY MASK 500GM(1635)(1700)", "OXYGEN PLUS SKIN CREEM 50gm(452)(415)(450)", "OXYGEN SKIN CREAM 500gm(2884)(2650)(2760)", "P. P SKIN WHITENING TREATMENT FACIAL KIT(380)(375)", "P.P ANTI AGEING TREATMENT FACIAL KIT(380)(349)(375)", "P.P SIGNATURE FACIAL KIT (380)(375)", "P.P SKIN PIGMENTATION CTRL FACIALKIT S (375)(325)", "P.P.BIOHYDRATINGCLEANSER 400GM 1115/-(1195/-)", "PEARL MASK 100 GM (1208)(1110)(1175)", "PEARL MASK 500 GM (4027)(3700)(3810)", "PINK LOTUS 40 GM (975)(1061)(975)(1045", "PLANT STEMS REDENSIFYING SERUM 30 ML (2900)", "PLATINIUM CELLU SKIN RECH COMPLEX 40 GM(2890)(2655)", "PLATINIUM SKIN RECHARGE SERUM 40 ML (2720)(2960)", "PLATINIUM SKIN RECHARGE SERUM 40ml(2960)(2720)", "PLATINUM SKIN RECHARGE MASK 50gm(2814)(2585)", "PLATINUM SKN RECHARGE CLEANSER 40GM(2655)2890(2655)", "POT OF GOLD FOUNDATION 30GM (1415)(1300)", "PP 7STEP SKIN WHITENING KIT(3+1)(1125)", "PP EXFOLIATING DERMABRASIVE (1070)", "PRO PWR NOURISHING CREAM 400gm (1115)(1195)", "PRO PWR SKIN SOFTENING CREAM 400GM (1195)", "PRO.PWR AROMA THERAPY F.PACK 400GM (1195)", "PRO.PWR HAIR CLEANSER 1000 ML (762)(700)(740)", "PRO.PWR HAIR OIL 1000ml(700)(740)", "PRO.PWR SKIN TONIC 1000 ML (700)(740)", "PROF.PWR REHYDRANT MILK 1000ml(700)755", "PROF.PWR REHYDRANT MILK 500ML (360)(390)", "Pearl Cream 500 Gm(9270)(9550)", "Pearl Kit (PWP 100gm + PMP 100gm)(2384)(2190)(2320)", "Pearl Mini Kit(Cream10gm+Mask10gm)(473)(435)(460)", "Premium Purple Deo WOMEN 130ml (269)", "ROSEMARY THYME HAIR CONDITIONER 150gm (410)(430)", "S.H. NEEM AMLA-BRAHMI HAIR CLEANSER 200ML 449/-", "S.H. NEEM AMLA-BRAHMI HAIR OIL 200ML 449/-", "SH  HENNA PLUS 1000ML (2410)(2480)", "SH AMLA PLUS 200 ML(750)(665)", "SH CLEANSE 40gm (700)(740)(750)", "SH DEW PLUS 40gm(700)(735)", "SH FAIR PLUS CREEM 40gm (762)(700)(740)", "SH GLOW PLUS 40gm (750)(765/-)", "SH HAIR TOUCH UP PLUS (BLACK) 7.50gm(320)(335) (300", "SH MOIST PLUS 50 GM (392)(360)", "SH MOISTURE CREAM 180GM(2000)", "SH RINSE 200ML(735)(800)(735)", "SH ROSE PLUS 1000ML (2410)(2623)(2480)", "SH ROSE PLUS 200ml (710)(750)", "SH ROSE PLUS 200ml(773)(710)(750)", "SH SMOOTH PLUS 40gm(710)(760)(775)", "SH TEX PLUS 100GM(965/-)", "SH24 CRT GOLD PLUS ANTI EXFOSCRUB 200gm(2720)(2960)", "SHA BASE PLUS 40 GM (750)(795)(800)", "SHA BRIDE SINDOOR 2 GM (265)(280)", "SHA CARE 200gms (875)(920/-)", "SHA FACE - HERBAL POWDER 65 GM (810)(850)", "SHA FAIR SOAP 100gm (260)(230)", "SHA HAIR 200gm (875)(920)", "SHA HENNA PLUS 200 ML(745)(750)(665)", "SHA LIFE PLUS 500gm(5795)(6085/-)", "SHA LIFE PLUS 60GM MRP (735)(810/-)", "SHA LOCKS 200 ML (710)(750)(665)", "SHA LOCKS PLUS 1000ML(2480)(2200)", "SHA MOIST PLUS 500 GM (2900)", "SHA ROSE PLUS 100ML (365)(385/-)", "SHA SCRUB PLUS 25gm (465)", "SHA SCRUB PLUS 40 GM (710)(773)(745)", "SHA SCRUB PLUS 40 GM + NEEM TULSI FREE(745)", "SHA SCRUB PLUS 500 GM (5820)(5965)", "SHA SCRUB PLUS 500 GM (5965)", "SHA SHAVE 70gm (240)(261)(240)", "SHA TAJ 40gm(762)(700)(745)", "SHA TEX PLUS 500gm (3290)(3455/*)", "SHA TONE 200ml (710)(750)", "SHA TREAT ( THERMOHERB) 900 GM (1980)", "SHA ZEEMA 500Gm (5940)(6465)(5940)", "SHACOVER B B CREAM SPF-20(40 GM) (350)", "SHAEYES KAJAL -2gm (290)(305)", "SHAFAIR PLUS 25 GM(480/-)", "SHAMOIST PLUS 100gm (700)(770/-)", "SHAMOIST PREMIUM-50GM 395/-", "SHAMOIST PREMIUM100GM FREE SHAROSE50ML(770)", "SHASILK PLUS 40GM (700)(710)(750)", "SKIN CARE KIT A(LIFE60+TEX100+T/F 150)(1775)", "SKIN CARE KIT B(LIFE60+MASK I100+T/F150)(1670)(1775", "SKIN CARE KITC(LIFE60+MOIST100+OOD)(1580)", "SOFTENING SKIN WASH 200ml(479)(440)(460)", "SPF 25 WITH FREE SPF 20 (165) (175)", "SUN BLOCK 80GM (SPF 40) (245)", "Saffron Skin Serum 50ml(920)(965)", "Sha Blem 25gm (773)(710)", "Sha Clear 100ml (735)(770)", "Sha Clove 25gm (729)(670)", "Sha Grow 200ml (800)(735)(770)(785)", "Sha Moon 100ml FREE", "Sha Moon 100ml(735)(780/-)(790/-)", "Sha Moon 100ml(800)(790/-)", "Sha Smooth 05gm", "Sha Tone 100ml (365)(385/-)", "Sha Zeema 40 Gm (800)(735)(770/-)", "Shahnaz Hussain Neem-Turmeric Soap 75gm (49/-)", "Spf 60 Sun Block 100gm(455)(485)", "TULSI NEEM FACE WASH 150 GM(410)(430)", "TULSI NEEM FACEWASH 150G+50G SAFRON F/W FREE(430)", "Tulsi Neem Face Wash 150gm FREE", "Tulsi Neem Face Wash 50gm (135)(140)", "Tulsi Neem Face Wash 50gm FREE", "VEDAPHARMA_x000D_  PLANT STEM CELL_x000D_  UNDEREYE 1255/-", "VEET CRM MIXED (115) 144 PK", "VEGPEEL 350gms (2655)", "Vegetable Exfoliating Powder 350gm (999)(1070)", "WHITE WATER LILY LOTION 100 ML (1150)(1230/-)"],
+  5: ["D+E  MASTER POCKET DEO(25ML)", "D+E FINE DEO", "D+E FOGG 800 SPORTS", "D+E FOGG 800_x000D_", "D+E FOGG ARABIA DEO 120ML", "D+E FOGG BLACK 120 ML", "D+E FOGG CLASSIC", "D+E FOGG FANTASTIC", "D+E FOGG FINE 25 ML", "D+E FOGG FLYER", "D+E FOGG FRESH", "D+E FOGG MASTER", "D+E FOGG MOBILE PACK-25", "D+E FOGG NEU DEO 120ML", "D+E FOGG ONE DEO 120ML", "D+E FOGG PURE LADY 50ML", "D+E FOGG ROCKSTAR 50ML", "D+E FOGG SCENT  50ML", "D+E FOGG SCENT 100ML", "D+E FOGG SCENT 15ML", "D+E FOGG SCENT 30ML", "D+E FOGG SCENT 75 ML", "D+E FOGG SCENT 90ML", "D+E FOGG SCENT GIFT 50ML", "D+E FOGG SCENT GIFT EDP 4x30", "D+E FOGG SCENT PRESTIGE 100ML", "D+E FOGG STAR 100GM", "D+E GIFT PACK 120ML", "D+E GLAMUP ALL", "D+E KLOZE A3", "D+E KLOZE A5", "D+E MASTER TALC 120GMS", "D+E MASTER TALC 35GMS", "D+E MONTHLY PACK 65ML", "D+E OSSUM DEO 120ML", "D+E OSSUM MIST-115", "D+E OSSUM MOBILE PACK-25ML", "D+E PRETTY 24 CREAM", "D+E REALMAN FRESH 150ML", "D+E ROLL ON", "D+E SCENT PREMIUM 120 ML", "D+E WHITE TONE CREAM-10", "D+E WHITE TONE CREAM-15", "D+E WHITE TONE CREAM-25", "D+E WHITE TONE CREAM-35", "D+E WHITE TONE CREAM-50", "D+E WHITE TONE-15", "D+E WHITE TONE-30", "D+E WHITE TONE-50", "D+E WHITE TONE-70", "FOGG 800 DEO", "FOGG BLACK 120 ML", "FOGG F20 EDP 100ML", "FOGG F20 EDP 50ML", "FOGG FANTASTIC", "FOGG FINE 25 ML", "FOGG FRESH DEO", "FOGG MASTER", "FOGG MASTI", "FOGG MOBILE PACK-25", "FOGG NEU DEO 120ML", "FOGG PERFUME 2020 100ML", "FOGG ROLL ON", "FOGG SCENT 100ML", "FOGG SCENT 15ML", "FOGG SCENT 30ML", "FOGG SCENT 50 ML", "FOGG SCENT BLACK 50ML", "FOGG SCENT EDP 50 ML", "FOGG SCENT EDP 60ML", "FOGG SCENT GIFT EDP 4x30", "FOGG SCENT GIFT PACK 100ML", "FOGG SCENT INTENSE 100 ML", "MASTER TALC-120GM", "MONTHLY PACK 65ML", "OSSUM ARABIC DEO 120ML", "OSSUM MOBLE PACK 25ML", "OSSUM PERFUME 2020 100 ML", "OSSUM_115ML", "OSSUM_120ML", "PRESTIGE DEO 150ML", "REALMAN FRESH 150ML", "REALMAN ROLL ON 50 ML", "RISE PRO SMART WATCH", "ROLL ON CONCENTRATED 10ML", "SCENT PREMIUM 120 ML", "TESTER", "WHITE TONE 15GM", "WHITE TONE 30GM", "WHITE TONE 35GM", "WHITE TONE 50GM", "WHITE TONE 55GM", "WHITE TONE 70GM", "WHITE TONE CREAM-10", "WHITE TONE CREAM-15", "WHITE TONE CREAM-25", "WHITE TONE CREAM-35", "WHITE TONE CREAM-50", "WHITE TONE80 GM"]
+};
+// Active product list (updated when company changes)
+var PRODUCTS = COMPANY_PRODUCTS[0].slice();
+
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbyky1fwD-8RQ9foSVAMxk1Fi0f1dkFMvjUBWDcHAeoM1hCrUyK6QzYc5tL7--sW-g/exec';
+
+// ── DEFAULT DATA ──
+var DEFAULT_COMPANIES = ['Reckitt','Shahnaz','MT','Reckitt - Burrabazar','Shahnaz Burrabazar','Fog'];
+var DEFAULT_USERS = [
+  { id:'u1', name:'Admin', username:'admin', password:'admin123', role:'admin', cos:[0,1,2,3,4,5] }
+];
+
+// ── IN-MEMORY STATE ──
+var companies   = DEFAULT_COMPANIES.slice();
+var users       = [];
+var entries     = [];
+var nid         = 1;
+var currentUser = null;
+
+var CUSTOM_PRODUCTS = [];
+var curAddCo = 0;
+var curRegCo = 0;
+var curSumCo = 0;
+var curType  = 'IN';
+
+// ── CLOUD HELPERS ──
+function gasGet(){
+  return fetch(GAS_URL+'?action=load', {redirect:'follow'})
+    .then(function(r){ return r.json(); });
+}
+
+function jbGet(){ return gasGet(); } // Alias patch for interval refresh
+
+function persist(){
+  var data = {
+    companies: companies,
+    users: users,
+    entries: entries,
+    nid: nid,
+    customProducts: CUSTOM_PRODUCTS
+  };
+  return fetch(GAS_URL, {
+    method: 'POST',
+    headers: {'Content-Type': 'text/plain;charset=utf-8'},
+    body: JSON.stringify({action:'save', payload: data})
+  })
+  .then(function(r){ return r.json(); })
+  .catch(function(){
+    var encoded = encodeURIComponent(JSON.stringify(data));
+    return fetch(GAS_URL+'?action=save&data='+encoded, {redirect:'follow'})
+      .then(function(r){ return r.json(); });
+  });
+}
+
+function persistSync(){
+  persist()
+    .then(function(res){ })
+    .catch(function(e){
+      toast('&#9888; Save error: '+e.message);
+      console.error('Save error:', e);
+    });
+}
+
+function loadFromCloud(cb){
+  showLoader(true);
+  gasGet().then(function(data){
+    if(data && data.companies){
+      companies = data.companies;
+      while(companies.length < DEFAULT_COMPANIES.length) companies.push(DEFAULT_COMPANIES[companies.length]);
+    }
+    if(data && data.users && data.users.length) users = data.users;
+    else users = DEFAULT_USERS.slice();
+    if(data && data.entries) entries = data.entries;
+    if(data && data.nid) nid = data.nid;
+    if(data && data.customProducts) CUSTOM_PRODUCTS = data.customProducts;
+    
+    // Sync the initial active product pool
+    selectAddCo(curAddCo);
+    
+    showLoader(false);
+    cb();
+  }).catch(function(e){
+    showLoader(false);
+    alert('Could not connect. Check your Web App URL. Error: '+e.message);
+  });
+}
+
+function showLoader(show){
+  var el=document.getElementById('cloud-loader');
+  if(el) el.style.display=show?'flex':'none';
+}
+
+// ── AUTH ──
+function startApp(){
+  document.getElementById('login-screen').style.display='none';
+  loadFromCloud(function(){
+    document.getElementById('login-screen').style.display='flex';
+  });
+}
+
+function doLogin(){
+  var u = document.getElementById('l-user').value.trim().toLowerCase();
+  var p = document.getElementById('l-pass').value;
+  var found = users.find(function(x){ return x.username.toLowerCase()===u && x.password===p; });
+  if(!found){
+    document.getElementById('login-err').style.display='block';
+    return;
+  }
+  currentUser = found;
+  document.getElementById('login-err').style.display='none';
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+  initApp();
+  
+  // Auto-refresh interval (fixed to use gasGet)
+  setInterval(function(){
+    if(!currentUser) return;
+    gasGet().then(function(data){
+      if(data && data.entries) entries = data.entries;
+      if(data && data.users) users = data.users;
+      if(data && data.companies){ companies = data.companies; buildAllTabs(); }
+      renderReg(); renderSum();
+    }).catch(function(){});
+  }, 30000);
+}
+
+function doLogout(){
+  currentUser = null;
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('l-user').value='';
+  document.getElementById('l-pass').value='';
+}
+
+// ── APP INIT ──
+function initApp(){
+  document.getElementById('user-chip').innerHTML = '&#128100; ' + currentUser.name;
+  document.getElementById('nav-admin').style.display = currentUser.role==='admin' ? 'flex' : 'none';
+  var cos = userCos();
+  curAddCo = cos[0];
+  curRegCo = cos[0];
+  curSumCo = cos[0];
+  
+  document.getElementById('fd').value = today();
+  buildAllTabs();
+  selectAddCo(curAddCo);
+  updateEntCount();
+  goPage('add', document.getElementById('nav-add'));
+}
+
+// ── NAVIGATION ──
+function goPage(pg, el){
+  document.querySelectorAll('.bnav').forEach(function(b){b.classList.remove('active');});
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  el.classList.add('active');
+  document.getElementById('page-'+pg).classList.add('active');
+  if(pg==='add'){ selectAddCo(curAddCo); }
+  if(pg==='reg'){ buildRegTabs(); renderReg(); }
+  if(pg==='sum'){ buildSumTabs(); renderSum(); }
+  if(pg==='admin'){ renderAdmin(); }
+}
+
+function userCos(){
+  return (currentUser && currentUser.cos) ? currentUser.cos : [0,1,2,3,4,5];
+}
+
+function buildAllTabs(){ buildAddCompanyDropdown(); buildRegTabs(); buildSumTabs(); }
+
+// Builds the dynamic Company Option dropdown selection list for entry pages
+function buildAddCompanyDropdown(){
+  var sel = document.getElementById('add-company-select');
+  if(!sel) return;
+  sel.innerHTML = '';
+  userCos().forEach(function(i){
+    var opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = companies[i];
+    if(curAddCo === i) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function selectAddCo(i){
+  curAddCo = i;
+  var base = COMPANY_PRODUCTS[i] || [];
+  var custom = load('sr_custom_products') || [];
+  PRODUCTS = base.slice();
+  
+  custom.forEach(function(name){
+    if(!PRODUCTS.some(function(p){return p.toLowerCase()===name.toLowerCase();})) {
+      PRODUCTS.push(name);
+    }
+  });
+  PRODUCTS.sort(function(a,b){return a.toLowerCase().localeCompare(b.toLowerCase());});
+  
+  buildAddCompanyDropdown();
+  renderSelect(PRODUCTS);
+  document.getElementById('fi-search').value = '';
+  document.getElementById('add-product-bar').style.display = 'none';
+  prevBal();
+}
+
+function buildTabsFor(elId, cur, onClickFn){
+  var el = document.getElementById(elId);
+  el.innerHTML = userCos().map(function(i){
+    var cnt = entries.filter(function(e){return e.co===i;}).length;
+    return '<button class="co-tab c'+i+(cur===i?' active':'')+'" onclick="'+onClickFn+'('+i+')">'
+      +companies[i]+'<br><span style="font-size:10px;font-weight:400;opacity:.8">('+cnt+')</span></button>';
+  }).join('');
+}
+
+function buildRegTabs(){ buildTabsFor('reg-co-tabs', curRegCo, 'selectRegCo'); }
+function selectRegCo(i){ curRegCo=i; buildRegTabs(); renderReg(); }
+function buildSumTabs(){ buildTabsFor('sum-co-tabs', curSumCo, 'selectSumCo'); }
+function selectSumCo(i){ curSumCo=i; buildSumTabs(); renderSum(); }
+
+function setType(t){
+  curType=t;
+  document.getElementById('btn-in').classList.toggle('on',t==='IN');
+  document.getElementById('btn-out').classList.toggle('on',t==='OUT');
+  document.getElementById('plbl').textContent = t==='IN'?'From — Supplier *':'To — Customer / Reason *';
+  document.getElementById('fp').placeholder   = t==='IN'?'Supplier name':'Customer / Sale / Damage';
+  prevBal();
+}
+
+function renderSelect(list){
+  var sel = document.getElementById('fi');
+  if(!sel) return;
+  sel.innerHTML='';
+  list.forEach(function(p){
+    var opt = document.createElement('option');
+    opt.value = p;
+    opt.textContent = p;
+    sel.appendChild(opt);
+  });
+}
+
+function filterProd(q){
+  var ql=(q||'').toLowerCase().trim();
+  var matched = ql ? PRODUCTS.filter(function(p){return p.toLowerCase().indexOf(ql)>=0;}) : PRODUCTS;
+  renderSelect(matched);
+  
+  var bar = document.getElementById('add-product-bar');
+  var exactMatch = PRODUCTS.some(function(p){return p.toLowerCase()===ql;});
+  if(ql && !exactMatch){
+    document.getElementById('new-prod-name').textContent = q.trim();
+    bar.style.display='flex';
+  } else {
+    bar.style.display='none';
+  }
+}
+
+function addNewProduct(){
+  var name = document.getElementById('fi-search').value.trim();
+  if(!name){toast('Type a product name first');return;}
+  if(PRODUCTS.some(function(p){return p.toLowerCase()===name.toLowerCase();})){
+    toast('Already in the list');return;
+  }
+  PRODUCTS.push(name);
+  PRODUCTS.sort(function(a,b){return a.toLowerCase().localeCompare(b.toLowerCase());});
+  
+  var custom = load('sr_custom_products') || [];
+  custom.push(name);
+  save('sr_custom_products', custom);
+  
+  renderSelect(PRODUCTS);
+  var sel = document.getElementById('fi');
+  for(var i=0;i<sel.options.length;i++){
+    if(sel.options[i].value===name){sel.selectedIndex=i;break;}
+  }
+  pickFromSelect();
+  document.getElementById('add-product-bar').style.display='none';
+  toast('&#10003; “'+name+'” added to product list');
+}
+
+function pickFromSelect(){
+  var sel=document.getElementById('fi');
+  if(sel && sel.value){
+    document.getElementById('fi-search').value=sel.value;
+    document.getElementById('fu').value='Pcs';
+  }
+  prevBal();
+}
+
+function coBalance(coIdx){
+  var co=entries.filter(function(e){return e.co===coIdx;});
+  return co.reduce(function(a,e){return a+(e.type==='IN'?e.qty:-e.qty);},0);
+}
+
+function prevBal(){
+  var q=parseInt(document.getElementById('fq').value)||0;
+  var cur=coBalance(curAddCo);
+  var after=curType==='IN'?cur+q:cur-q;
+  var el=document.getElementById('pbval');
+  el.textContent=after.toLocaleString()+' Pcs ('+companies[curAddCo]+')';
+  el.style.color=after<0?'#9C0006':after<10?'#854F0B':'#27500A';
+}
+
+function saveEntry(){
+  var d  = document.getElementById('fd').value;
+  var sel= document.getElementById('fi');
+  var it = (sel&&sel.value?sel.value:document.getElementById('fi-search').value).trim();
+  var q  = parseInt(document.getElementById('fq').value);
+  var p  = document.getElementById('fp').value.trim();
+  var v  = document.getElementById('fv').value.trim();
+  var r  = document.getElementById('fr').value.trim();
+  var s  = currentUser.name;
+  if(!d||!it||!q||q<1||!p){ toast('Fill all required (*) fields'); return; }
+  var entry = {id:nid++,co:curAddCo,date:d,item:it,unit:'Pcs',type:curType,qty:q,party:p,staff:s,verified:v,remarks:r};
+  entries.push(entry);
+  entries.sort(function(a,b){return a.date.localeCompare(b.date);});
+  updateEntCount();
+  clearForm();
+  
+  var saveBtn = document.querySelector('.btn.btn-p');
+  if(saveBtn){ saveBtn.disabled=true; saveBtn.textContent='Saving...'; }
+  persist()
+    .then(function(res){
+      if(saveBtn){ saveBtn.disabled=false; saveBtn.innerHTML='&#10003; Save Entry'; }
+      toast('&#10003; Saved — '+curType+' '+q+' '+it);
+    })
+    .catch(function(e){
+      if(saveBtn){ saveBtn.disabled=false; saveBtn.innerHTML='&#10003; Save Entry'; }
+      entries = entries.filter(function(x){return x.id!==entry.id;});
+      nid--;
+      updateEntCount();
+      toast('&#9888; Save failed: '+e.message);
+    });
+}
+
+function clearForm(){
+  ['fq','fp','fv','fr'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('fu').value='Pcs';
+  document.getElementById('fi-search').value='';
+  renderSelect(PRODUCTS);
+  prevBal();
+}
+
+function updateEntCount(){
+  var total = entries.length;
+  document.getElementById('ent-count').textContent = total+' total entries';
+}
+
+function today(){ return new Date().toISOString().slice(0,10); }
+
+// ── REGISTER ──
+function renderReg(){
+  var srch=(document.getElementById('srch').value||'').toLowerCase();
+  var ft  =document.getElementById('ftype').value;
+  var coEnt=entries.filter(function(e){return e.co===curRegCo;});
+  var filt=coEnt.filter(function(e){
+    if(ft&&e.type!==ft)return false;
+    if(srch&&!(e.item.toLowerCase().includes(srch)||(e.staff||'').toLowerCase().includes(srch)||(e.party||'').toLowerCase().includes(srch)))return false;
+    return true;
+  });
+  var tbody=document.getElementById('rtbody');
+  if(!filt.length){tbody.innerHTML='<tr><td colspan="11" class="empty">No entries for '+companies[curRegCo]+'</td></tr>';document.getElementById('rcnt').textContent='';return;}
+  
+  var itemRunning={};
+  tbody.innerHTML=filt.map(function(e){
+    if(!itemRunning[e.item])itemRunning[e.item]={in:0,out:0};
+    if(e.type==='IN')itemRunning[e.item].in+=e.qty;
+    else itemRunning[e.item].out+=e.qty;
+    var ri=itemRunning[e.item].in,ro=itemRunning[e.item].out;
+    var bal=ri-ro,bc=bal<0?'bneg':bal<10?'bwarn':'bpos';
+    return '<tr>'+
+      '<td style="white-space:nowrap;color:#666;font-size:11px">'+e.date+'</td>'+
+      '<td style="font-weight:600">'+e.item+'</td>'+
+      '<td><span class="badge '+(e.type==='IN'?'bin':'bout')+'">'+(e.type==='IN'?'&#9650;IN':'&#9660;OUT')+'</span></td>'+
+      '<td style="text-align:center;font-weight:700;color:'+(e.type==='IN'?'#27500A':'#9C0006')+'">'+(e.type==='IN'?'+':'-')+e.qty+'</td>'+
+      '<td style="color:#555;font-size:11px">'+e.party+'</td>'+
+      '<td style="font-size:11px">'+e.staff+'</td>'+
+      '<td style="font-size:11px;color:#aaa">'+e.remarks+'</td>'+
+      '<td class="nc">'+ri.toLocaleString()+'</td>'+
+      '<td class="nc">'+ro.toLocaleString()+'</td>'+
+      '<td class="bal '+bc+'">'+bal.toLocaleString()+'</td>'+
+      '<td>'+(currentUser.role==='admin'?'<button class="btn-d" onclick="delEntry('+e.id+')">&#128465;</button>':'')+'</td>'+
+    '</tr>';
+  }).join('');
+  document.getElementById('rcnt').textContent=filt.length+' entr'+(filt.length===1?'y':'ies');
+}
+
+function clearFil(){document.getElementById('srch').value='';document.getElementById('ftype').value='';renderReg();}
+
+function delEntry(id){
+  if(currentUser.role!=='admin'){toast('Admin only');return;}
+  if(!confirm('Delete this entry?'))return;
+  entries=entries.filter(function(e){return e.id!==id;});
+  persistSync(); updateEntCount(); buildRegTabs(); renderReg();
+  toast('Deleted');
+}
+
+function exportCSV(){
+  var hdr=['Company','Date','Item','Unit','Type','Qty','Party','Staff','Verified','Remarks'];
+  var coEnt=entries.filter(function(e){return e.co===curRegCo;});
+  var rows=coEnt.map(function(e){return[companies[e.co],e.date,e.item,e.unit,e.type,e.qty,e.party,e.staff,e.verified||'',e.remarks||''];});
+  var csv=[hdr].concat(rows).map(function(r){return r.map(function(v){return'"'+(v||'')+'"';}).join(',');}).join('\n');
+  var a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='stock_'+companies[curRegCo].replace(/\s/g,'_')+'.csv';a.click();
+  toast('Exported');
+}
+
+// ── SUMMARY ──
+var curSumView = 'item';
+
+function setSumView(view, el){
+  curSumView = view;
+  document.querySelectorAll('.sum-view-btn').forEach(function(b){b.classList.remove('active');});
+  el.classList.add('active');
+  renderSumTable();
+}
+
+function renderSum(){
+  var coEnt=entries.filter(function(e){return e.co===curSumCo;});
+  var ti=0,to=0;
+  coEnt.forEach(function(e){if(e.type==='IN')ti+=e.qty;else to+=e.qty;});
+  var bal=ti-to,td=today(),tc=coEnt.filter(function(e){return e.date===td;}).length;
+  document.getElementById('s1').textContent=ti.toLocaleString();
+  document.getElementById('s2').textContent=to.toLocaleString();
+  document.getElementById('s3').textContent=bal.toLocaleString();
+  document.getElementById('s3').className='kpi-val '+(bal<0?'r':bal<10?'a':'b');
+  document.getElementById('s4').textContent=tc;
+  document.getElementById('s5').textContent=coEnt.length;
+  renderSumTable();
+}
+
+function renderSumTable(){
+  var coEnt=entries.filter(function(e){return e.co===curSumCo;});
+  var tbody=document.getElementById('stbody');
+  var thead=document.getElementById('sum-thead');
+
+  if(curSumView==='item'){
+    thead.innerHTML='<tr><th>Item</th><th style="text-align:center;color:#0C447C">Total IN</th><th style="text-align:center;color:#0C447C">Total OUT</th><th style="text-align:center;color:#7B3F00">Balance</th></tr>';
+    var items={};
+    coEnt.forEach(function(e){
+      if(!items[e.item])items[e.item]={in:0,out:0};
+      if(e.type==='IN')items[e.item].in+=e.qty;else items[e.item].out+=e.qty;
+    });
+    var keys=Object.keys(items).sort();
+    if(!keys.length){tbody.innerHTML='<tr><td colspan="4" class="empty">No entries for '+companies[curSumCo]+'</td></tr>';return;}
+    tbody.innerHTML=keys.map(function(nm){
+      var d=items[nm],b=d.in-d.out,bc=b<0?'bneg':b<10?'bwarn':'bpos';
+      return '<tr><td style="font-weight:600">'+nm+'</td><td class="nc" style="color:#27500A">'+d.in+'</td><td class="nc" style="color:#9C0006">'+d.out+'</td><td class="bal '+bc+'">'+b+'</td></tr>';
+    }).join('');
+
+  } else if(curSumView==='supplier'){
+    thead.innerHTML='<tr><th>Supplier</th><th style="text-align:center;color:#0C447C">Total IN (Qty)</th><th style="text-align:center">No. of Transactions</th><th style="text-align:left">Top Items</th></tr>';
+    var suppliers={};
+    coEnt.filter(function(e){return e.type==='IN';}).forEach(function(e){
+      var p=e.party||'Unknown';
+      if(!suppliers[p])suppliers[p]={qty:0,count:0,items:{}};
+      suppliers[p].qty+=e.qty;
+      suppliers[p].count++;
+      if(!suppliers[p].items[e.item])suppliers[p].items[e.item]=0;
+      suppliers[p].items[e.item]+=e.qty;
+    });
+    var skeys=Object.keys(suppliers).sort();
+    if(!skeys.length){tbody.innerHTML='<tr><td colspan="4" class="empty">No IN entries for '+companies[curSumCo]+'</td></tr>';return;}
+    tbody.innerHTML=skeys.map(function(s){
+      var d=suppliers[s];
+      var topItems=Object.keys(d.items).sort(function(a,b){return d.items[b]-d.items[a];}).slice(0,3).map(function(i){return i+' ('+d.items[i]+')';}).join(', ');
+      return '<tr><td style="font-weight:600;color:#0C447C">'+s+'</td><td class="nc" style="color:#27500A">'+d.qty+'</td><td class="nc">'+d.count+'</td><td style="font-size:11px;color:#555">'+topItems+'</td></tr>';
+    }).join('');
+
+  } else if(curSumView==='customer'){
+    thead.innerHTML='<tr><th>Customer / Reason</th><th style="text-align:center;color:#9C0006">Total OUT (Qty)</th><th style="text-align:center">No. of Transactions</th><th style="text-align:left">Top Items</th></tr>';
+    var customers={};
+    coEnt.filter(function(e){return e.type==='OUT';}).forEach(function(e){
+      var p=e.party||'Unknown';
+      if(!customers[p])customers[p]={qty:0,count:0,items:{}};
+      customers[p].qty+=e.qty;
+      customers[p].count++;
+      if(!customers[p].items[e.item])customers[p].items[e.item]=0;
+      customers[p].items[e.item]+=e.qty;
+    });
+    var ckeys=Object.keys(customers).sort();
+    if(!ckeys.length){tbody.innerHTML='<tr><td colspan="4" class="empty">No OUT entries for '+companies[curSumCo]+'</td></tr>';return;}
+    tbody.innerHTML=ckeys.map(function(c){
+      var d=customers[c];
+      var topItems=Object.keys(d.items).sort(function(a,b){return d.items[b]-d.items[a];}).slice(0,3).map(function(i){return i+' ('+d.items[i]+')';}).join(', ');
+      return '<tr><td style="font-weight:600;color:#712B13">'+c+'</td><td class="nc" style="color:#9C0006">'+d.qty+'</td><td class="nc">'+d.count+'</td><td style="font-size:11px;color:#555">'+topItems+'</td></tr>';
+    }).join('');
+  }
+}
+
+function exportSummaryExcel(){
+  var coEnt=entries.filter(function(e){return e.co===curSumCo;});
+  var coName=companies[curSumCo];
+  var today_str=today();
+
+  var items={};
+  coEnt.forEach(function(e){
+    if(!items[e.item])items[e.item]={in:0,out:0};
+    if(e.type==='IN')items[e.item].in+=e.qty;else items[e.item].out+=e.qty;
+  });
+
+  var suppliers={};
+  coEnt.filter(function(e){return e.type==='IN';}).forEach(function(e){
+    var p=e.party||'Unknown';
+    if(!suppliers[p])suppliers[p]={qty:0,count:0,items:{}};
+    suppliers[p].qty+=e.qty; suppliers[p].count++;
+    if(!suppliers[p].items[e.item])suppliers[p].items[e.item]=0;
+    suppliers[p].items[e.item]+=e.qty;
+  });
+
+  var customers={};
+  coEnt.filter(function(e){return e.type==='OUT';}).forEach(function(e){
+    var p=e.party||'Unknown';
+    if(!customers[p])customers[p]={qty:0,count:0,items:{}};
+    customers[p].qty+=e.qty; customers[p].count++;
+    if(!customers[p].items[e.item])customers[p].items[e.item]=0;
+    customers[p].items[e.item]+=e.qty;
+  });
+
+  var itemSheet=[['Item','Total IN','Total OUT','Balance']];
+  Object.keys(items).sort().forEach(function(nm){
+    var d=items[nm]; itemSheet.push([nm,d.in,d.out,d.in-d.out]);
+  });
+
+  var supSheet=[['Supplier','Total IN (Qty)','No. of Transactions','Top Items Supplied']];
+  Object.keys(suppliers).sort().forEach(function(s){
+    var d=suppliers[s];
+    var top=Object.keys(d.items).sort(function(a,b){return d.items[b]-d.items[a];}).slice(0,3).map(function(i){return i+' ('+d.items[i]+')';}).join(' | ');
+    supSheet.push([s,d.qty,d.count,top]);
+  });
+
+  var custSheet=[['Customer / Reason','Total OUT (Qty)','No. of Transactions','Top Items']];
+  Object.keys(customers).sort().forEach(function(c){
+    var d=customers[c];
+    var top=Object.keys(d.items).sort(function(a,b){return d.items[b]-d.items[a];}).slice(0,3).map(function(i){return i+' ('+d.items[i]+')';}).join(' | ');
+    custSheet.push([c,d.qty,d.count,top]);
+  });
+
+  var regSheet=[['Date','Item','Type','Qty','Party','Staff','Verified','Remarks']];
+  coEnt.forEach(function(e){
+    regSheet.push([e.date,e.item,e.type,e.qty,e.party||'',e.staff||'',e.verified||'',e.remarks||'']);
+  });
+
+  function xmlEsc(s){
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function sheetToXML(rows, sheetName){
+    var rows_xml = rows.map(function(row){
+      var cells = row.map(function(cell){
+        var v = cell===null||cell===undefined?'':cell;
+        if(typeof v==='number'){
+          return '<Cell><Data ss:Type="Number">'+v+'</Data></Cell>';
+        } else {
+          return '<Cell><Data ss:Type="String">'+xmlEsc(v)+'</Data></Cell>';
+        }
+      }).join('');
+      return '<Row>'+cells+'</Row>';
+    }).join('');
+    return '<Worksheet ss:Name="'+xmlEsc(sheetName)+'"><Table>'+rows_xml+'</Table></Worksheet>';
+  }
+
+  var xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
+    + '<?mso-application progid="Excel.Sheet"?>\n'
+    + '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"'
+    + ' xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">\n'
+    + sheetToXML(itemSheet, 'Item-wise') + '\n'
+    + sheetToXML(supSheet, 'Supplier-wise') + '\n'
+    + sheetToXML(custSheet, 'Customer-wise') + '\n'
+    + sheetToXML(regSheet, 'Full Register') + '\n'
+    + '</Workbook>';
+
+  var blob = new Blob([xml], {type:'application/vnd.ms-excel;charset=utf-8'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'Summary_'+coName.replace(/[^a-zA-Z0-9]/g,'_')+'_'+today_str+'.xls';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('\u2713 Excel file downloaded');
+}
+
+// ── ADMIN ──
+function renderAdmin(){
+  var el=document.getElementById('nu-co-access');
+  el.innerHTML=companies.map(function(name,i){
+    return '<label class="co-chk c'+i+'"><input type="checkbox" id="nu-co-'+i+'" checked> '+name+'</label>';
+  }).join('');
+  companies.forEach(function(name,i){
+    var el=document.getElementById('cname'+i);
+    if(el) el.value=name;
+  });
+  renderUserList();
+  renderCustomProducts();
+}
+
+function renderCustomProducts(){
+  var custom = load('sr_custom_products') || [];
+  var el = document.getElementById('custom-prod-list');
+  if(!el) return;
+  if(!custom.length){el.innerHTML='<span style="color:#aaa">No custom products added yet.</span>';return;}
+  el.innerHTML = custom.map(function(name,idx){
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 4px;border-bottom:1px solid #E8EEF6">'
+      +'<span>'+name+'</span>'
+      +'<button class="btn-d" onclick="deleteCustomProduct('+idx+')" style="font-size:11px;padding:4px 10px">&#128465; Remove</button>'
+      +'</div>';
+  }).join('');
+}
+
+function deleteCustomProduct(idx){
+  var custom = load('sr_custom_products') || [];
+  var name = custom[idx];
+  if(!name) return;
+  if(!confirm('Remove "'+name+'" from the product list?'))return;
+  custom.splice(idx,1);
+  save('sr_custom_products', custom);
+  
+  var pi = PRODUCTS.indexOf(name);
+  if(pi>=0) PRODUCTS.splice(pi,1);
+  renderCustomProducts();
+  toast('Removed from list');
+}
+
+function renderUserList(){
+  var el=document.getElementById('user-list');
+  el.innerHTML=users.map(function(u){
+    var bgColors=['#EBF3FB','#EAF3DE','#FAECE7','#F3EDFB','#E6F5F4','#FBF4E6'];
+    var fgColors=['#0C447C','#27500A','#712B13','#5B3287','#0A5F5A','#7A4B00'];
+    var coNames=u.cos.map(function(i){return '<span style="background:'+bgColors[i]+';color:'+fgColors[i]+';padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;margin-right:3px">'+companies[i]+'</span>';}).join('');
+    var isAdmin=(u.id==='u1');
+    return '<div class="user-row">'+
+      '<div class="user-info">'+
+        '<div class="user-name">'+u.name+' &nbsp;<span class="role-badge role-'+u.role+'">'+u.role+'</span></div>'+
+        '<div class="user-meta">@'+u.username+' &nbsp;|&nbsp; '+coNames+'</div>'+
+      '</div>'+
+      (!isAdmin?'<div style="display:flex;gap:6px">'+
+        '<button class="btn-d" onclick="resetPwd(\''+u.id+'\')">&#128274; Reset</button>'+
+        '<button class="btn-d" onclick="removeUser(\''+u.id+'\')">&#128465;</button>'+
+      '</div>':'<span style="font-size:11px;color:#aaa">protected</span>')+
+    '</div>';
+  }).join('');
+}
+
+function addUser(){
+  var name=document.getElementById('nu-name').value.trim();
+  var uname=document.getElementById('nu-user').value.trim().toLowerCase();
+  var pass=document.getElementById('nu-pass').value;
+  var role=document.getElementById('nu-role').value;
+  var cos=[];
+  companies.forEach(function(_,i){if(document.getElementById('nu-co-'+i)&&document.getElementById('nu-co-'+i).checked)cos.push(i);});
+  if(!name||!uname||!pass){toast('Fill all fields');return;}
+  if(users.find(function(u){return u.username.toLowerCase()===uname;})){toast('Username already exists');return;}
+  if(cos.length===0){toast('Select at least one company');return;}
+  users.push({id:'u'+Date.now(),name:name,username:uname,password:pass,role:role,cos:cos});
+  persistSync();
+  ['nu-name','nu-user','nu-pass'].forEach(function(id){document.getElementById(id).value='';});
+  renderUserList();
+  toast('&#10003; Employee '+name+' added');
+}
+
+function resetPwd(uid){
+  var np=prompt('Enter new password for this user:');
+  if(!np)return;
+  var u=users.find(function(x){return x.id===uid;});
+  if(u){u.password=np;persistSync();toast('Password reset');}
+}
+
+function removeUser(uid){
+  if(!confirm('Remove this employee?'))return;
+  users=users.filter(function(u){return u.id!==uid;});
+  persistSync();renderUserList();toast('Employee removed');
+}
+
+function saveCoNames(){
+  [0,1,2,3,4,5].forEach(function(i){
+    var v=document.getElementById('cname'+i).value.trim();
+    if(v)companies[i]=v;
+  });
+  persistSync(); buildAllTabs(); renderUserList();
+  toast('&#10003; Company names saved');
+}
+
+function toast(msg){
+  var t=document.getElementById('toast');
+  t.innerHTML=msg;t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},2500);
+}
+
+// ── STARTUP ──
+(function(){
+  if(!GAS_URL || GAS_URL === 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE'){
+    document.getElementById('cloud-loader').style.display='flex';
+    document.getElementById('cloud-loader').innerHTML='<div style="font-size:48px;margin-bottom:16px">&#9888;</div><div style="font-size:16px;font-weight:700;color:#fff">No URL configured</div><div style="font-size:12px;opacity:.7;margin-top:6px;color:#fff;text-align:center;padding:0 20px">Please open the HTML file and paste your<br>Google Apps Script URL in the GAS_URL variable</div>';
+    return;
+  }
+  startApp();
+})();
+</script>
+</body>
+</html>
