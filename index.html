@@ -373,6 +373,17 @@ td{padding:8px 10px;border-bottom:1px solid #E8EEF6;vertical-align:middle}
       <button class="btn btn-o btn-sm" onclick="scanDuplicateParties()">&#128269; Scan for Duplicates</button>
       <div id="dup-party-results" style="margin-top:12px"></div>
     </div>
+    <div class="card">
+      <div class="card-hd">&#128230; Fix Duplicate Item Names</div>
+      <p style="font-size:12px;color:#888;margin-bottom:12px">Scans all existing entries for item names that differ only by case, spacing, or punctuation (e.g. "Hands on Tread k4 ghola" vs "Hands on Tread k4(ghola)") and merges them into one consistent name.</p>
+      <button class="btn btn-o btn-sm" onclick="scanDuplicateItems()">&#128269; Scan for Duplicates</button>
+      <div id="dup-item-results" style="margin-top:12px"></div>
+    </div>
+    <div class="card">
+      <div class="card-hd">&#128465; Deleted Entries Log</div>
+      <p style="font-size:12px;color:#888;margin-bottom:12px">Record of every entry deleted by an admin, including who deleted it and when.</p>
+      <div id="deleted-log-list"></div>
+    </div>
   </div>
 
   <!-- BOTTOM NAV -->
@@ -447,6 +458,7 @@ var currentUser = null;
 
 var CUSTOM_PRODUCTS = [];
 var PARTIES = [];
+var DELETED_LOG = [];
 var curAddCo = 0;
 var curRegCo = 0;
 var curSumCo = 0;
@@ -467,7 +479,8 @@ function persist(){
     entries: entries,
     nid: nid,
     customProducts: CUSTOM_PRODUCTS,
-    parties: PARTIES
+    parties: PARTIES,
+    deletedLog: DELETED_LOG
   };
   return fetch(GAS_URL, {
     method: 'POST',
@@ -508,29 +521,13 @@ function loadFromCloud(cb){
     if(data && data.nid) nid = data.nid;
     if(data && data.customProducts) CUSTOM_PRODUCTS = data.customProducts;
     if(data && data.parties) PARTIES = data.parties;
+    if(data && data.deletedLog) DELETED_LOG = data.deletedLog;
 
     // Build party list from existing entries too (covers entries saved before this feature)
     entries.forEach(function(e){
       if(e.party) addPartyToList(e.party, false);
     });
     renderPartyDatalist();
-
-    // One-time manual fix: merge known duplicate item-name variants
-    var itemMergeApplied = false;
-    var ITEM_ALIASES = {
-      'hands on tread k4 ghola': 'Hands on Tread k4(ghola)',
-      'hands on tread k4 (ghola)': 'Hands on Tread k4(ghola)'
-    };
-    entries.forEach(function(e){
-      var key = (e.item||'').trim().toLowerCase();
-      if(ITEM_ALIASES[key] && e.item !== ITEM_ALIASES[key]){
-        e.item = ITEM_ALIASES[key];
-        itemMergeApplied = true;
-      }
-    });
-    if(itemMergeApplied){
-      persist().catch(function(){});
-    }
 
     // Sync the initial active product pool
     selectAddCo(curAddCo);
@@ -891,6 +888,14 @@ function clearSumDates(){
 function delEntry(id){
   if(currentUser.role!=='admin'){toast('Admin only');return;}
   if(!confirm('Delete this entry?'))return;
+  var deletedEntry = entries.find(function(e){return e.id===id;});
+  if(deletedEntry){
+    DELETED_LOG.push({
+      entry: deletedEntry,
+      deletedBy: currentUser.name,
+      deletedAt: new Date().toISOString()
+    });
+  }
   entries=entries.filter(function(e){return e.id!==id;});
   persistSync(); updateEntCount(); buildRegTabs(); renderReg();
   toast('Deleted');
@@ -1108,6 +1113,40 @@ function renderAdmin(){
   });
   renderUserList();
   renderCustomProducts();
+  renderDeletedLog();
+}
+
+function renderDeletedLog(){
+  var el = document.getElementById('deleted-log-list');
+  if(!el) return;
+  if(!DELETED_LOG.length){
+    el.innerHTML = '<span style="color:#aaa;font-size:13px">No entries have been deleted yet.</span>';
+    return;
+  }
+  // Show most recent deletions first
+  var sorted = DELETED_LOG.slice().sort(function(a,b){
+    return new Date(b.deletedAt) - new Date(a.deletedAt);
+  });
+  el.innerHTML = '<div class="tb-wrap"><table class="sum-tb"><thead><tr>'
+    + '<th>Deleted On</th><th>Deleted By</th><th>Company</th><th>Date</th><th>Item</th><th>Type</th><th>Qty</th><th>Party</th><th>Staff</th>'
+    + '</tr></thead><tbody>'
+    + sorted.map(function(d){
+        var e = d.entry;
+        var delDate = new Date(d.deletedAt);
+        var delDateStr = delDate.toLocaleDateString() + ' ' + delDate.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+        return '<tr>'
+          + '<td style="font-size:11px;color:#888">' + delDateStr + '</td>'
+          + '<td style="font-size:11px;font-weight:600;color:#C0392B">' + d.deletedBy + '</td>'
+          + '<td style="font-size:11px">' + (companies[e.co]||'?') + '</td>'
+          + '<td style="font-size:11px;color:#666">' + e.date + '</td>'
+          + '<td style="font-size:11px;font-weight:600">' + e.item + '</td>'
+          + '<td><span class="badge ' + (e.type==='IN'?'bin':'bout') + '">' + e.type + '</span></td>'
+          + '<td class="nc">' + e.qty + '</td>'
+          + '<td style="font-size:11px;color:#555">' + (e.party||'') + '</td>'
+          + '<td style="font-size:11px">' + (e.staff||'') + '</td>'
+        + '</tr>';
+      }).join('')
+    + '</tbody></table></div>';
 }
 
 function renderCustomProducts(){
@@ -1121,6 +1160,200 @@ function renderCustomProducts(){
       +'<button class="btn-d" onclick="deleteCustomProduct('+idx+')" style="font-size:11px;padding:4px 10px">&#128465; Remove</button>'
       +'</div>';
   }).join('');
+}
+
+// ── Normalizes an item name for loose duplicate detection:
+// lowercase, trim, collapse multiple spaces, remove spaces around brackets/punctuation
+function normItemKey(name){
+  return (name||'')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g,' ')           // collapse multiple spaces
+    .replace(/\s*([()\-\/,.])\s*/g,'$1')  // remove spaces around ( ) - / , .
+    .replace(/[()]/g,'');          // ignore brackets entirely for matching
+}
+
+// Simple Levenshtein edit-distance — used to catch near-identical spellings (typos)
+function editDistance(a, b){
+  var m = a.length, n = b.length;
+  var dp = [];
+  for(var i=0;i<=m;i++){ dp.push([i]); }
+  for(var j=0;j<=n;j++){ dp[0][j]=j; }
+  for(i=1;i<=m;i++){
+    for(j=1;j<=n;j++){
+      if(a[i-1]===b[j-1]) dp[i][j]=dp[i-1][j-1];
+      else dp[i][j] = 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+    }
+  }
+  return dp[m][n];
+}
+
+function scanDuplicateItems(){
+  var resultsEl = document.getElementById('dup-item-results');
+  resultsEl.innerHTML = '<span style="color:#888;font-size:12px">Scanning...</span>';
+
+  // Step 1: collect unique item names with their counts
+  var itemCounts = {};
+  entries.forEach(function(e){
+    if(!e.item) return;
+    var display = e.item.trim().replace(/\s+/g,' ');
+    itemCounts[display] = (itemCounts[display]||0) + 1;
+  });
+  var uniqueItems = Object.keys(itemCounts);
+
+  // Step 2: group by exact normalized key (punctuation/case/spacing differences)
+  var exactGroups = {};
+  uniqueItems.forEach(function(name){
+    var key = normItemKey(name);
+    if(!exactGroups[key]) exactGroups[key] = [];
+    exactGroups[key].push(name);
+  });
+
+  var dupGroups = [];
+  var usedNames = {};
+
+  Object.keys(exactGroups).forEach(function(key){
+    var variants = exactGroups[key];
+    if(variants.length > 1){
+      var canonical = variants.sort(function(a,b){return itemCounts[b]-itemCounts[a];})[0];
+      dupGroups.push({variants:variants, counts:itemCounts, canonical:canonical, type:'exact'});
+      variants.forEach(function(v){ usedNames[v]=true; });
+    }
+  });
+
+  // Step 3: fuzzy match remaining items (catches typos like "Ghola" vs "Ghula",
+  // and near-misses that exact-normalization didn't merge, e.g. missing brackets entirely)
+  var remaining = uniqueItems.filter(function(n){ return !usedNames[n]; });
+  // Compare each remaining item against: other remaining items AND existing canonical group names
+  var canonicalsOfExactGroups = dupGroups.map(function(g){ return g.canonical; });
+  var compareTargets = remaining.concat(canonicalsOfExactGroups);
+  var fuzzyUsed = {};
+  for(var i=0;i<remaining.length;i++){
+    if(fuzzyUsed[remaining[i]]) continue;
+    var cluster = [remaining[i]];
+    var mergeIntoGroupIdx = -1;
+    for(var j=0;j<compareTargets.length;j++){
+      var target = compareTargets[j];
+      if(target === remaining[i]) continue;
+      if(fuzzyUsed[target]) continue;
+      var a = remaining[i].toLowerCase(), b = target.toLowerCase();
+      var maxLen = Math.max(a.length, b.length);
+      if(maxLen === 0) continue;
+      var dist = editDistance(a, b);
+      var threshold = Math.max(2, Math.floor(maxLen / 12) + 1);
+      if(dist > 0 && dist <= threshold){
+        // Is this target the canonical of an existing exact-group?
+        var existingGroupIdx = dupGroups.findIndex(function(g){ return g.canonical === target; });
+        if(existingGroupIdx >= 0 && j >= remaining.length){
+          mergeIntoGroupIdx = existingGroupIdx;
+        } else if(remaining.indexOf(target) >= 0){
+          cluster.push(target);
+        }
+      }
+    }
+    if(mergeIntoGroupIdx >= 0){
+      // Add this remaining item into the existing exact-group instead of creating a new one
+      dupGroups[mergeIntoGroupIdx].variants.push(remaining[i]);
+      fuzzyUsed[remaining[i]] = true;
+    } else if(cluster.length > 1){
+      cluster.forEach(function(n){ fuzzyUsed[n]=true; });
+      var canonical = cluster.sort(function(a,b){return itemCounts[b]-itemCounts[a];})[0];
+      dupGroups.push({variants:cluster, counts:itemCounts, canonical:canonical, type:'fuzzy'});
+    }
+  }
+
+  if(!dupGroups.length){
+    resultsEl.innerHTML = '<div style="color:#27ae60;font-size:13px;padding:10px;background:#EAF3DE;border-radius:8px">&#10003; No duplicate or similar item names found.</div>';
+    return;
+  }
+
+  var exactCount = dupGroups.filter(function(g){return g.type==='exact';}).length;
+  var fuzzyCount = dupGroups.filter(function(g){return g.type==='fuzzy';}).length;
+
+  var html = '<div style="font-size:13px;color:#7A4B00;background:#FFF8E7;border:1.5px solid #E6A817;border-radius:8px;padding:12px;margin-bottom:10px">';
+  html += '&#9888; Found ' + dupGroups.length + ' group(s) of similar item names';
+  if(fuzzyCount) html += ' (' + exactCount + ' exact-format matches, ' + fuzzyCount + ' similar-spelling matches)';
+  html += '. Review each group below and pick the correct spelling, or uncheck a group to skip it:</div>';
+
+  dupGroups.forEach(function(g, idx){
+    var badge = g.type==='fuzzy'
+      ? '<span style="font-size:9px;background:#FDEDEC;color:#C0392B;padding:2px 6px;border-radius:10px;margin-left:6px">similar spelling</span>'
+      : '<span style="font-size:9px;background:#EBF3FB;color:#1F3864;padding:2px 6px;border-radius:10px;margin-left:6px">formatting</span>';
+    html += '<div style="border:1px solid #E8EEF6;border-radius:8px;padding:10px;margin-bottom:8px" id="item-group-'+idx+'">';
+    html += '<div style="font-size:12px;color:#555;margin-bottom:6px">'
+      + '<label style="cursor:pointer"><input type="checkbox" id="item-include-'+idx+'" checked onchange="toggleItemGroup('+idx+')"> Group '+(idx+1)+' '+badge+' &mdash; merge into: <strong style="color:#1F3864" id="item-canonical-'+idx+'">' + g.canonical + '</strong></label>'
+      + '</div>';
+    g.variants.forEach(function(v, vIdx){
+      html += '<label style="display:block;font-size:11px;color:#555;padding:3px 0 3px 20px;cursor:pointer">'
+        + '<input type="radio" name="item-pick-'+idx+'" data-group="'+idx+'" data-variant="'+vIdx+'" '+(v===g.canonical?'checked':'')+' onchange="pickItemCanonical(this)"> '
+        + '"' + v + '" (' + g.counts[v] + ' entries)'
+        + '</label>';
+    });
+    html += '</div>';
+  });
+
+  html += '<button class="btn btn-p btn-sm" onclick="applyItemMerge()" style="margin-top:8px">&#10003; Merge Selected Groups</button>';
+  resultsEl.innerHTML = html;
+
+  window._dupItemPlan = dupGroups;
+}
+
+function toggleItemGroup(idx){
+  var checkbox = document.getElementById('item-include-'+idx);
+  var groupDiv = document.getElementById('item-group-'+idx);
+  var radios = groupDiv.querySelectorAll('input[type=radio]');
+  radios.forEach(function(r){ r.disabled = !checkbox.checked; });
+  groupDiv.style.opacity = checkbox.checked ? '1' : '0.45';
+}
+
+function pickItemCanonical(radio){
+  var groupIdx = parseInt(radio.getAttribute('data-group'));
+  var variantIdx = parseInt(radio.getAttribute('data-variant'));
+  var g = window._dupItemPlan[groupIdx];
+  var newCanonical = g.variants[variantIdx];
+  g.canonical = newCanonical;
+  document.getElementById('item-canonical-'+groupIdx).textContent = newCanonical;
+}
+
+function applyItemMerge(){
+  var plan = window._dupItemPlan;
+  if(!plan || !plan.length){ toast('Nothing to merge'); return; }
+
+  // Build a direct name -> canonical lookup, skipping unchecked groups
+  var lookup = {};
+  var anySelected = false;
+  plan.forEach(function(g, idx){
+    var checkbox = document.getElementById('item-include-'+idx);
+    if(checkbox && !checkbox.checked) return; // skipped by user
+    anySelected = true;
+    g.variants.forEach(function(v){
+      if(v !== g.canonical) lookup[v] = g.canonical;
+    });
+  });
+
+  if(!anySelected){ toast('No groups selected to merge'); return; }
+  if(!confirm('This will update item names on matching entries. Continue?')) return;
+
+  var changedCount = 0;
+  entries.forEach(function(e){
+    if(!e.item) return;
+    var display = e.item.trim().replace(/\s+/g,' ');
+    if(lookup[display] && e.item !== lookup[display]){
+      e.item = lookup[display];
+      changedCount++;
+    }
+  });
+
+  document.getElementById('dup-item-results').innerHTML = '<span style="color:#888;font-size:12px">Saving changes...</span>';
+  persist().then(function(){
+    toast('&#10003; Merged ' + changedCount + ' entries successfully');
+    document.getElementById('dup-item-results').innerHTML = '<div style="color:#27ae60;font-size:13px;padding:10px;background:#EAF3DE;border-radius:8px">&#10003; Fixed ' + changedCount + ' entries. Item names are now consistent.</div>';
+    window._dupItemPlan = null;
+    renderReg();
+    renderSum();
+  }).catch(function(err){
+    toast('&#9888; Error saving: ' + err.message);
+  });
 }
 
 function scanDuplicateParties(){
@@ -1234,8 +1467,8 @@ function renderUserList(){
         '<div class="user-meta">@'+u.username+' &nbsp;|&nbsp; '+coNames+'</div>'+
       '</div>'+
       '<div style="display:flex;gap:6px">'+
-        '<button class="btn-d" onclick="openEditUser(\''+u.id+'\')" style="background:#EBF3FB;color:#1F3864">&#9999; Edit</button>'+
         (!isAdmin?(
+          '<button class="btn-d" onclick="openEditUser(\''+u.id+'\')" style="background:#EBF3FB;color:#1F3864">&#9999; Edit</button>'+
           '<button class="btn-d" onclick="resetPwd(\''+u.id+'\')">&#128274; Reset</button>'+
           '<button class="btn-d" onclick="removeUser(\''+u.id+'\')">&#128465;</button>'
         ):'<span style="font-size:11px;color:#aaa;align-self:center">protected</span>')+
@@ -1264,6 +1497,7 @@ function addUser(){
 function openEditUser(uid){
   var u = users.find(function(x){return x.id===uid;});
   if(!u) return;
+  if(u.id === 'u1'){ toast('The main admin account is protected and cannot be edited'); return; }
   document.getElementById('eu-id').value = u.id;
   document.getElementById('eu-name').value = u.name;
   document.getElementById('eu-role').value = u.role;
