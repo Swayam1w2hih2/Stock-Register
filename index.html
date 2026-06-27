@@ -517,7 +517,12 @@ var COMPANY_PRODUCTS = {
 // Active product list (updated when company changes)
 var PRODUCTS = COMPANY_PRODUCTS[0].slice();
 
-var GAS_URL = 'https://script.google.com/macros/s/AKfycbyky1fwD-8RQ9foSVAMxk1Fi0f1dkFMvjUBWDcHAeoM1hCrUyK6QzYc5tL7--sW-g/exec';
+// ══════════════════════════════════════════════════════
+//  SUPABASE CONFIG — paste your keys here
+// ══════════════════════════════════════════════════════
+var SUPABASE_URL = 'https://xpobuqwmlqnmrbuhsvmq.supabase.co/rest/v1/';
+var SUPABASE_KEY = 'sb_publishable_f0lSOD5VCLkUsCer9LWrJA_6_YbbN7f';
+var RECORD_ID = 1; // fixed row ID in the data table
 
 // ── DEFAULT DATA ──
 var DEFAULT_COMPANIES = ['Reckitt','Shahnaz','MT','Reckitt - Burrabazar','Shahnaz Burrabazar','Fog','Damage'];
@@ -540,15 +545,42 @@ var curRegCo = 0;
 var curSumCo = 0;
 var curType  = 'IN';
 
-// ── CLOUD HELPERS ──
-function gasGet(){
-  return fetch(GAS_URL+'?action=load', {redirect:'follow'})
-    .then(function(r){ return r.json(); });
+// ── SUPABASE HELPERS ──
+function sbHeaders(){
+  return {
+    'Content-Type': 'application/json',
+    'apikey': SUPABASE_KEY,
+    'Authorization': 'Bearer ' + SUPABASE_KEY,
+    'Prefer': 'return=minimal'
+  };
 }
 
-function jbGet(){ return gasGet(); } // Alias patch for interval refresh
+function sbGet(){
+  return fetch(SUPABASE_URL + '/rest/v1/stockdata?id=eq.' + RECORD_ID + '&select=payload', {
+    headers: sbHeaders()
+  }).then(function(r){ return r.json(); })
+  .then(function(rows){
+    if(rows && rows.length > 0 && rows[0].payload){
+      return rows[0].payload;
+    }
+    return null;
+  });
+}
 
-// Save using a hidden form POST — bypasses CORS completely
+function sbSet(data){
+  // Upsert — insert if not exists, update if exists
+  return fetch(SUPABASE_URL + '/rest/v1/stockdata', {
+    method: 'POST',
+    headers: Object.assign({}, sbHeaders(), {'Prefer': 'resolution=merge-duplicates,return=minimal'}),
+    body: JSON.stringify({id: RECORD_ID, payload: data})
+  }).then(function(r){
+    if(r.ok || r.status === 201 || r.status === 204) return {ok:true};
+    return r.text().then(function(t){ throw new Error(t); });
+  });
+}
+
+function jbGet(){ return sbGet(); } // Alias for auto-refresh
+
 function persist(){
   var data = {
     companies: companies,
@@ -559,80 +591,27 @@ function persist(){
     parties: PARTIES,
     deletedLog: DELETED_LOG
   };
-  var json = JSON.stringify(data);
-
-  return new Promise(function(resolve, reject){
-    try{
-      // Create a hidden iframe to receive the form response
-      var iframeName = 'gas-save-frame-' + Date.now();
-      var iframe = document.createElement('iframe');
-      iframe.name = iframeName;
-      iframe.style.display = 'none';
-      document.body.appendChild(iframe);
-
-      // Create a hidden form that POSTs to GAS via the iframe
-      var form = document.createElement('form');
-      form.method = 'POST';
-      form.action = GAS_URL;
-      form.target = iframeName;
-      form.style.display = 'none';
-
-      var input = document.createElement('input');
-      input.type = 'hidden';
-      input.name = 'payload';
-      input.value = json;
-      form.appendChild(input);
-
-      var actionInput = document.createElement('input');
-      actionInput.type = 'hidden';
-      actionInput.name = 'action';
-      actionInput.value = 'save';
-      form.appendChild(actionInput);
-
-      document.body.appendChild(form);
-
-      // Clean up after 5 seconds
-      var timeout = setTimeout(function(){
-        try{ document.body.removeChild(form); }catch(e){}
-        try{ document.body.removeChild(iframe); }catch(e){}
-        resolve({ok:true}); // assume saved
-      }, 5000);
-
-      iframe.onload = function(){
-        clearTimeout(timeout);
-        try{ document.body.removeChild(form); }catch(e){}
-        setTimeout(function(){
-          try{ document.body.removeChild(iframe); }catch(e){}
-        }, 1000);
-        resolve({ok:true});
-      };
-
-      form.submit();
-    }catch(err){
-      reject(err);
-    }
-  });
+  return sbSet(data);
 }
 
 function persistSync(){
   persist()
-    .then(function(res){ })
+    .then(function(){})
     .catch(function(e){
-      toast('&#9888; Save error: '+e.message);
+      toast('&#9888; Save error: ' + e.message);
       console.error('Save error:', e);
     });
 }
 
 function loadFromCloud(cb){
   showLoader(true);
-  gasGet().then(function(data){
+  sbGet().then(function(data){
     if(data && data.companies){
       companies = data.companies;
       while(companies.length < DEFAULT_COMPANIES.length) companies.push(DEFAULT_COMPANIES[companies.length]);
     }
     if(data && data.users && data.users.length) users = data.users;
     else users = DEFAULT_USERS.slice();
-    // Auto-upgrade admin to have access to all companies
     users.forEach(function(u){
       if(u.role==='admin') u.cos=[0,1,2,3,4,5,6];
     });
@@ -642,20 +621,16 @@ function loadFromCloud(cb){
     if(data && data.parties) PARTIES = data.parties;
     if(data && data.deletedLog) DELETED_LOG = data.deletedLog;
 
-    // Build party list from existing entries too (covers entries saved before this feature)
     entries.forEach(function(e){
       if(e.party) addPartyToList(e.party, false);
     });
     renderPartyDatalist();
-
-    // Sync the initial active product pool
     selectAddCo(curAddCo);
-    
     showLoader(false);
     cb();
   }).catch(function(e){
     showLoader(false);
-    alert('Could not connect. Check your Web App URL. Error: '+e.message);
+    alert('Could not connect to Supabase. Check your URL and Key.\nError: ' + e.message);
   });
 }
 
@@ -2155,9 +2130,9 @@ function toast(msg){
 
 // ── STARTUP ──
 (function(){
-  if(!GAS_URL || GAS_URL === 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE'){
+  if(!SUPABASE_URL || SUPABASE_URL === 'YOUR_SUPABASE_URL'){
     document.getElementById('cloud-loader').style.display='flex';
-    document.getElementById('cloud-loader').innerHTML='<div style="font-size:48px;margin-bottom:16px">&#9888;</div><div style="font-size:16px;font-weight:700;color:#fff">No URL configured</div><div style="font-size:12px;opacity:.7;margin-top:6px;color:#fff;text-align:center;padding:0 20px">Please open the HTML file and paste your<br>Google Apps Script URL in the GAS_URL variable</div>';
+    document.getElementById('cloud-loader').innerHTML='<div style="font-size:48px;margin-bottom:16px">&#9888;</div><div style="font-size:16px;font-weight:700;color:#fff">Supabase not configured</div><div style="font-size:12px;opacity:.7;margin-top:6px;color:#fff;text-align:center;padding:0 20px">Please open the HTML file and paste your<br>Supabase URL and Key</div>';
     return;
   }
   startApp();
