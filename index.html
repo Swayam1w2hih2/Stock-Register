@@ -546,6 +546,8 @@ var curSumCo = 0;
 var curType  = 'IN';
 
 // ── SUPABASE HELPERS ──
+// Clean URL — remove any trailing /rest/v1 or slashes the user may have included
+var _sbBase = SUPABASE_URL.replace(/\/rest\/v1\/?.*$/, '').replace(/\/$/, '');
 function sbHeaders(){
   return {
     'Content-Type': 'application/json',
@@ -556,7 +558,7 @@ function sbHeaders(){
 }
 
 function sbGet(){
-  return fetch(SUPABASE_URL + '/rest/v1/stockdata?id=eq.' + RECORD_ID + '&select=payload', {
+  return fetch(_sbBase + '/rest/v1/stockdata?id=eq.' + RECORD_ID + '&select=payload', {
     headers: sbHeaders()
   }).then(function(r){ return r.json(); })
   .then(function(rows){
@@ -569,7 +571,7 @@ function sbGet(){
 
 function sbSet(data){
   // Upsert — insert if not exists, update if exists
-  return fetch(SUPABASE_URL + '/rest/v1/stockdata', {
+  return fetch(_sbBase + '/rest/v1/stockdata', {
     method: 'POST',
     headers: Object.assign({}, sbHeaders(), {'Prefer': 'resolution=merge-duplicates,return=minimal'}),
     body: JSON.stringify({id: RECORD_ID, payload: data})
