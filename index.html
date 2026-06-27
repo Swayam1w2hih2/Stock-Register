@@ -560,16 +560,32 @@ function persist(){
   };
   var json = JSON.stringify(data);
   var encoded = encodeURIComponent(json);
-  // Use GET with data param — the only method that reliably works with GAS cross-origin
-  return fetch(GAS_URL + '?action=save&data=' + encoded, {
-    method: 'GET',
-    redirect: 'follow'
-  }).then(function(r){
-    return r.text().then(function(text){
-      try{ return JSON.parse(text); }
-      catch(e){ return {ok:true}; }
-    });
-  });
+
+  // If data is small enough, use single GET request
+  if(encoded.length <= 6000){
+    return fetch(GAS_URL + '?action=save&data=' + encoded, {redirect:'follow'})
+      .then(function(r){ return r.text(); })
+      .then(function(t){ try{return JSON.parse(t);}catch(e){return {ok:true};} });
+  }
+
+  // For large data: split into chunks and send one by one
+  var CHUNK = 4000;
+  var chunks = [];
+  for(var i=0; i<encoded.length; i+=CHUNK){
+    chunks.push(encoded.substring(i, i+CHUNK));
+  }
+  var total = chunks.length;
+
+  // Send chunks sequentially
+  function sendChunk(idx){
+    if(idx >= total) return Promise.resolve({ok:true});
+    var url = GAS_URL + '?action=saveChunk&idx='+idx+'&total='+total+'&chunk='+chunks[idx];
+    return fetch(url, {redirect:'follow'})
+      .then(function(r){ return r.text(); })
+      .then(function(){ return sendChunk(idx+1); });
+  }
+
+  return sendChunk(0);
 }
 
 function persistSync(){
