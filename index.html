@@ -559,33 +559,16 @@ function persist(){
     deletedLog: DELETED_LOG
   };
   var json = JSON.stringify(data);
-  // Use fetch with text/plain content-type — GAS accepts this via doPost
-  // This is the most reliable cross-origin method
-  return new Promise(function(resolve, reject){
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', GAS_URL, true);
-    xhr.setRequestHeader('Content-Type', 'text/plain');
-    xhr.onload = function(){
-      try{
-        var res = JSON.parse(xhr.responseText);
-        resolve(res);
-      }catch(e){
-        resolve({ok:true}); // GAS saved but response was redirected
-      }
-    };
-    xhr.onerror = function(){
-      // Try GET as fallback for smaller payloads
-      var encoded = encodeURIComponent(json);
-      if(encoded.length < 7000){
-        fetch(GAS_URL+'?action=save&data='+encoded, {redirect:'follow'})
-          .then(function(r){ return r.json(); })
-          .then(resolve)
-          .catch(reject);
-      } else {
-        reject(new Error('Network error — check your internet connection'));
-      }
-    };
-    xhr.send(json);
+  var encoded = encodeURIComponent(json);
+  // Use GET with data param — the only method that reliably works with GAS cross-origin
+  return fetch(GAS_URL + '?action=save&data=' + encoded, {
+    method: 'GET',
+    redirect: 'follow'
+  }).then(function(r){
+    return r.text().then(function(text){
+      try{ return JSON.parse(text); }
+      catch(e){ return {ok:true}; }
+    });
   });
 }
 
