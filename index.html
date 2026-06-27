@@ -548,6 +548,7 @@ function gasGet(){
 
 function jbGet(){ return gasGet(); } // Alias patch for interval refresh
 
+// Save using a hidden form POST — bypasses CORS completely
 function persist(){
   var data = {
     companies: companies,
@@ -559,33 +560,58 @@ function persist(){
     deletedLog: DELETED_LOG
   };
   var json = JSON.stringify(data);
-  var encoded = encodeURIComponent(json);
 
-  // If data is small enough, use single GET request
-  if(encoded.length <= 6000){
-    return fetch(GAS_URL + '?action=save&data=' + encoded, {redirect:'follow'})
-      .then(function(r){ return r.text(); })
-      .then(function(t){ try{return JSON.parse(t);}catch(e){return {ok:true};} });
-  }
+  return new Promise(function(resolve, reject){
+    try{
+      // Create a hidden iframe to receive the form response
+      var iframeName = 'gas-save-frame-' + Date.now();
+      var iframe = document.createElement('iframe');
+      iframe.name = iframeName;
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
 
-  // For large data: split into chunks and send one by one
-  var CHUNK = 4000;
-  var chunks = [];
-  for(var i=0; i<encoded.length; i+=CHUNK){
-    chunks.push(encoded.substring(i, i+CHUNK));
-  }
-  var total = chunks.length;
+      // Create a hidden form that POSTs to GAS via the iframe
+      var form = document.createElement('form');
+      form.method = 'POST';
+      form.action = GAS_URL;
+      form.target = iframeName;
+      form.style.display = 'none';
 
-  // Send chunks sequentially
-  function sendChunk(idx){
-    if(idx >= total) return Promise.resolve({ok:true});
-    var url = GAS_URL + '?action=saveChunk&idx='+idx+'&total='+total+'&chunk='+chunks[idx];
-    return fetch(url, {redirect:'follow'})
-      .then(function(r){ return r.text(); })
-      .then(function(){ return sendChunk(idx+1); });
-  }
+      var input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'payload';
+      input.value = json;
+      form.appendChild(input);
 
-  return sendChunk(0);
+      var actionInput = document.createElement('input');
+      actionInput.type = 'hidden';
+      actionInput.name = 'action';
+      actionInput.value = 'save';
+      form.appendChild(actionInput);
+
+      document.body.appendChild(form);
+
+      // Clean up after 5 seconds
+      var timeout = setTimeout(function(){
+        try{ document.body.removeChild(form); }catch(e){}
+        try{ document.body.removeChild(iframe); }catch(e){}
+        resolve({ok:true}); // assume saved
+      }, 5000);
+
+      iframe.onload = function(){
+        clearTimeout(timeout);
+        try{ document.body.removeChild(form); }catch(e){}
+        setTimeout(function(){
+          try{ document.body.removeChild(iframe); }catch(e){}
+        }, 1000);
+        resolve({ok:true});
+      };
+
+      form.submit();
+    }catch(err){
+      reject(err);
+    }
+  });
 }
 
 function persistSync(){
