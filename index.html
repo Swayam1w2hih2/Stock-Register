@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Stock Register">
+<meta name="theme-color" content="#1F3864">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231F3864'/><text y='.9em' font-size='70' x='15'>📦</text></svg>">
+<link rel="manifest" href="data:application/json,{&quot;name&quot;:&quot;Stock Register&quot;,&quot;short_name&quot;:&quot;StockReg&quot;,&quot;start_url&quot;:&quot;.&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;%231F3864&quot;,&quot;theme_color&quot;:&quot;%231F3864&quot;,&quot;icons&quot;:[{&quot;src&quot;:&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231F3864'/><text y='.9em' font-size='70' x='15'>📦</text></svg>&quot;,&quot;sizes&quot;:&quot;192x192&quot;,&quot;type&quot;:&quot;image/svg+xml&quot;}]}">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#1F3864">
 <title>Stock Register</title>
 <style>
@@ -73,6 +79,8 @@ body{font-family:Arial,sans-serif;font-size:14px;background:#F0F4FA;color:#1a1a1
 .type-btn .sub{font-size:10px;font-weight:400;opacity:.7;display:block;margin-top:3px}
 .type-btn.in.on{background:#EAF3DE;border-color:#3B6D11;color:#27500A}
 .type-btn.out.on{background:#FAECE7;border-color:#993C1D;color:#712B13}
+.type-btn.open{background:#F3EDFB;border-color:#C9A8E8;color:#5B3287}
+.type-btn.open.on{background:#5B3287;border-color:#5B3287;color:#fff}
 
 /* ── FORM ── */
 .fg{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -223,6 +231,7 @@ td{padding:8px 10px;border-bottom:1px solid #E8EEF6;vertical-align:middle}
       <div class="type-row">
         <button class="type-btn in on" id="btn-in" onclick="setType('IN')">&#9650; STOCK IN<span class="sub">Goods received</span></button>
         <button class="type-btn out" id="btn-out" onclick="setType('OUT')">&#9660; STOCK OUT<span class="sub">Goods issued / sold</span></button>
+        <button class="type-btn open" id="btn-open" onclick="setType('OPEN')">&#9632; OPENING STOCK<span class="sub">Initial stock entry</span></button>
       </div>
     </div>
     <div class="card">
@@ -771,8 +780,26 @@ function setType(t){
   curType=t;
   document.getElementById('btn-in').classList.toggle('on',t==='IN');
   document.getElementById('btn-out').classList.toggle('on',t==='OUT');
-  document.getElementById('plbl').textContent = t==='IN'?'From — Supplier *':'To — Customer / Reason *';
-  document.getElementById('fp').placeholder   = t==='IN'?'Supplier name':'Customer / Sale / Damage';
+  document.getElementById('btn-open').classList.toggle('on',t==='OPEN');
+  if(t==='OPEN'){
+    document.getElementById('plbl').textContent = 'Source';
+    document.getElementById('fp').value = 'Opening Stock';
+    document.getElementById('fp').readOnly = true;
+    document.getElementById('fp').style.background = '#F3EDFB';
+    document.getElementById('finv').value = 'OPENING';
+    document.getElementById('finv').readOnly = true;
+    document.getElementById('finv').style.background = '#F3EDFB';
+  } else {
+    document.getElementById('plbl').textContent = t==='IN'?'From — Supplier *':'To — Customer / Reason *';
+    document.getElementById('fp').placeholder = t==='IN'?'Supplier name':'Customer / Sale / Damage';
+    document.getElementById('fp').readOnly = false;
+    document.getElementById('fp').style.background = '';
+    document.getElementById('finv').readOnly = false;
+    document.getElementById('finv').style.background = '';
+    // Only clear if they were auto-filled
+    if(document.getElementById('fp').value === 'Opening Stock') document.getElementById('fp').value = '';
+    if(document.getElementById('finv').value === 'OPENING') document.getElementById('finv').value = '';
+  }
   prevBal();
 }
 
@@ -859,8 +886,11 @@ function saveEntry(){
   var r  = document.getElementById('fr').value.trim();
   var inv = (document.getElementById('finv')||{value:''}).value.trim();
   var s  = currentUser.name;
-  if(!d||!it||!q||q<1||!p||!inv){ toast('Fill all required (*) fields including Invoice No.'); return; }
-  var entry = {id:nid++,co:curAddCo,date:d,item:it,unit:'Pcs',type:curType,qty:q,party:p,staff:s,verified:v,remarks:r,invoice:inv};
+  if(!d||!it||!q||q<1){ toast('Fill all required (*) fields'); return; }
+  if(curType!=='OPEN' && !p){ toast('Fill all required (*) fields'); return; }
+  if(curType!=='OPEN' && !inv){ toast('Fill all required (*) fields including Invoice No.'); return; }
+  var entryType = curType==='OPEN' ? 'IN' : curType;
+  var entry = {id:nid++,co:curAddCo,date:d,item:it,unit:'Pcs',type:entryType,qty:q,party:p||'Opening Stock',staff:s,verified:v,remarks:r,invoice:inv||'OPENING',openingStock:curType==='OPEN'};
   entries.push(entry);
   entries.sort(function(a,b){return a.date.localeCompare(b.date);});
   addPartyToList(p);
@@ -2130,6 +2160,14 @@ function toast(msg){
   setTimeout(function(){t.classList.remove('show');},2500);
 }
 
+// ── PWA ──
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
+    var sw='self.addEventListener("install",e=>{e.waitUntil(caches.open("sv1").then(c=>c.addAll(["./"])))});self.addEventListener("fetch",e=>{e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)))});';
+    var blob=new Blob([sw],{type:'application/javascript'});
+    navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(function(){});
+  });
+}
 // ── STARTUP ──
 (function(){
   if(!SUPABASE_URL || SUPABASE_URL === 'YOUR_SUPABASE_URL'){
