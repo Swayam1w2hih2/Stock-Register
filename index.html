@@ -505,28 +505,7 @@ td{padding:8px 10px;border-bottom:1px solid #E8EEF6;vertical-align:middle}
 </div>
 
 <script>
-// ── PWA MANIFEST (injected dynamically so it works from a single HTML file) ──
-(function(){
-  var icon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAAABmJLR0QA/wD/AP+gvaeTAAAEQ0lEQVR4nO3BMQEAAADCoPVP7WsIoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAeAMBuAABHgAAAABJRU5ErkJggg==';
-  var manifest = {
-    name: 'Stock Register',
-    short_name: 'StockReg',
-    description: 'Inventory Management System',
-    start_url: window.location.href,
-    scope: window.location.href,
-    display: 'standalone',
-    orientation: 'portrait',
-    background_color: '#1F3864',
-    theme_color: '#1F3864',
-    icons: [
-      {src: icon, sizes: '192x192', type: 'image/png'},
-      {src: icon, sizes: '512x512', type: 'image/png'}
-    ]
-  };
-  var blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
-  var url = URL.createObjectURL(blob);
-  document.getElementById('pwa-manifest').href = url;
-})();
+// PWA manifest served from manifest.json
 // LocalStorage wrappers to patch missing helper references
 function load(key){
   try { var v = localStorage.getItem(key); return v ? JSON.parse(v) : []; } catch(e){ return []; }
@@ -552,7 +531,7 @@ var PRODUCTS = COMPANY_PRODUCTS[0].slice();
 //  SUPABASE CONFIG — paste your keys here
 // ══════════════════════════════════════════════════════
 var SUPABASE_URL = 'https://xpobuqwmlqnmrbuhsvmq.supabase.co';
-var SUPABASE_KEY = 'sb_publishable_f0lSOD5VCLkUsCer9LWrJA_6_YbbN7f';
+var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhwb2J1cXdtbHFubXJidWhzdm1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1Mzk5NDQsImV4cCI6MjA5ODExNTk0NH0.puPeFWVthk0PoPWv-kZgmHYxqP-pbIYCAZA5T05YWhY';
 var RECORD_ID = 1; // fixed row ID in the data table
 
 // ── DEFAULT DATA ──
