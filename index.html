@@ -7,7 +7,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Stock Register">
 <meta name="theme-color" content="#1F3864">
-<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231F3864'/><text y='.9em' font-size='70' x='15'>📦</text></svg>">
 <link rel="manifest" href="./manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#1F3864">
@@ -79,8 +78,6 @@ body{font-family:Arial,sans-serif;font-size:14px;background:#F0F4FA;color:#1a1a1
 .type-btn .sub{font-size:10px;font-weight:400;opacity:.7;display:block;margin-top:3px}
 .type-btn.in.on{background:#EAF3DE;border-color:#3B6D11;color:#27500A}
 .type-btn.out.on{background:#FAECE7;border-color:#993C1D;color:#712B13}
-.type-btn.open{background:#F3EDFB;border-color:#C9A8E8;color:#5B3287}
-.type-btn.open.on{background:#5B3287;border-color:#5B3287;color:#fff}
 
 /* ── FORM ── */
 .fg{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -177,6 +174,35 @@ td{padding:8px 10px;border-bottom:1px solid #E8EEF6;vertical-align:middle}
   .kpi-val{font-size:18px}
   .add-user-form .fg{grid-template-columns:1fr}
 }
+
+/* ── MOBILE IMPROVEMENTS ── */
+@media (max-width: 600px) {
+  body { font-size: 16px; }
+  .card { padding: 14px 12px; border-radius: 12px; margin-bottom: 14px; }
+  .card-hd { font-size: 15px; padding: 10px 12px; border-radius: 8px; }
+  .type-row { gap: 8px; }
+  .type-btn { padding: 14px 8px; font-size: 13px; font-weight: 700; border-radius: 10px; min-height: 64px; }
+  .type-btn .sub { font-size: 11px; margin-top: 3px; }
+  .fl label { font-size: 14px; font-weight: 600; margin-bottom: 5px; }
+  input, select, .prod-list { font-size: 16px !important; padding: 12px 10px !important; border-radius: 8px !important; min-height: 48px; }
+  .prod-list { font-size: 15px !important; }
+  .btn { padding: 14px 18px; font-size: 15px; font-weight: 700; border-radius: 10px; min-height: 50px; }
+  .btn-p { font-size: 16px; padding: 16px; }
+  .bnav { font-size: 11px; padding: 6px 2px; }
+  .bnav .ico { font-size: 22px; }
+  .bottom-nav { height: 66px; }
+  .fg { gap: 10px; }
+  .prev-bar { font-size: 14px; padding: 10px 12px; border-radius: 8px; }
+  table { font-size: 13px; }
+  th, td { padding: 8px 6px; }
+  .pill { font-size: 11px; padding: 3px 7px; }
+  .prod-search { font-size: 16px !important; padding: 12px 10px !important; }
+  .hd-bar { padding: 10px 12px; }
+  .hd-bar h2 { font-size: 16px; }
+}
+/* Opening Stock button style */
+.type-btn.open { background: #F3EDFB; border-color: #C9A8E8; color: #5B3287; }
+.type-btn.open.on { background: #5B3287; border-color: #5B3287; color: #fff; }
 </style>
 </head>
 <body>
@@ -505,7 +531,6 @@ td{padding:8px 10px;border-bottom:1px solid #E8EEF6;vertical-align:middle}
 </div>
 
 <script>
-// PWA manifest served from manifest.json
 // LocalStorage wrappers to patch missing helper references
 function load(key){
   try { var v = localStorage.getItem(key); return v ? JSON.parse(v) : []; } catch(e){ return []; }
@@ -783,23 +808,22 @@ function setType(t){
   document.getElementById('btn-out').classList.toggle('on',t==='OUT');
   document.getElementById('btn-open').classList.toggle('on',t==='OPEN');
   if(t==='OPEN'){
-    document.getElementById('plbl').textContent = 'Source';
-    document.getElementById('fp').value = 'Opening Stock';
-    document.getElementById('fp').readOnly = true;
-    document.getElementById('fp').style.background = '#F3EDFB';
-    document.getElementById('finv').value = 'OPENING';
-    document.getElementById('finv').readOnly = true;
-    document.getElementById('finv').style.background = '#F3EDFB';
+    document.getElementById('plbl').textContent='Source';
+    document.getElementById('fp').value='Opening Stock';
+    document.getElementById('fp').readOnly=true;
+    document.getElementById('fp').style.background='#F3EDFB';
+    document.getElementById('finv').value='OPENING';
+    document.getElementById('finv').readOnly=true;
+    document.getElementById('finv').style.background='#F3EDFB';
   } else {
-    document.getElementById('plbl').textContent = t==='IN'?'From — Supplier *':'To — Customer / Reason *';
-    document.getElementById('fp').placeholder = t==='IN'?'Supplier name':'Customer / Sale / Damage';
-    document.getElementById('fp').readOnly = false;
-    document.getElementById('fp').style.background = '';
-    document.getElementById('finv').readOnly = false;
-    document.getElementById('finv').style.background = '';
-    // Only clear if they were auto-filled
-    if(document.getElementById('fp').value === 'Opening Stock') document.getElementById('fp').value = '';
-    if(document.getElementById('finv').value === 'OPENING') document.getElementById('finv').value = '';
+    document.getElementById('plbl').textContent=t==='IN'?'From — Supplier *':'To — Customer / Reason *';
+    document.getElementById('fp').placeholder=t==='IN'?'Supplier name':'Customer / Sale / Damage';
+    document.getElementById('fp').readOnly=false;
+    document.getElementById('fp').style.background='';
+    document.getElementById('finv').readOnly=false;
+    document.getElementById('finv').style.background='';
+    if(document.getElementById('fp').value==='Opening Stock') document.getElementById('fp').value='';
+    if(document.getElementById('finv').value==='OPENING') document.getElementById('finv').value='';
   }
   prevBal();
 }
@@ -888,10 +912,10 @@ function saveEntry(){
   var inv = (document.getElementById('finv')||{value:''}).value.trim();
   var s  = currentUser.name;
   if(!d||!it||!q||q<1){ toast('Fill all required (*) fields'); return; }
-  if(curType!=='OPEN' && !p){ toast('Fill all required (*) fields'); return; }
-  if(curType!=='OPEN' && !inv){ toast('Fill all required (*) fields including Invoice No.'); return; }
-  var entryType = curType==='OPEN' ? 'IN' : curType;
-  var entry = {id:nid++,co:curAddCo,date:d,item:it,unit:'Pcs',type:entryType,qty:q,party:p||'Opening Stock',staff:s,verified:v,remarks:r,invoice:inv||'OPENING',openingStock:curType==='OPEN'};
+  if(curType!=='OPEN'&&!p){ toast('Fill all required (*) fields'); return; }
+  if(curType!=='OPEN'&&!inv){ toast('Fill all required (*) fields including Invoice No.'); return; }
+  var entryType=curType==='OPEN'?'IN':curType;
+  var entry={id:nid++,co:curAddCo,date:d,item:it,unit:'Pcs',type:entryType,qty:q,party:p||'Opening Stock',staff:s,verified:v,remarks:r,invoice:inv||'OPENING',openingStock:curType==='OPEN'};
   entries.push(entry);
   entries.sort(function(a,b){return a.date.localeCompare(b.date);});
   addPartyToList(p);
@@ -2161,10 +2185,11 @@ function toast(msg){
   setTimeout(function(){t.classList.remove('show');},2500);
 }
 
-// ── PWA ──
+
+// ── PWA SERVICE WORKER ──
 if('serviceWorker' in navigator){
   window.addEventListener('load',function(){
-    var sw='self.addEventListener("install",e=>{e.waitUntil(caches.open("sv1").then(c=>c.addAll(["./"])))});self.addEventListener("fetch",e=>{e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)))});';
+    var sw='self.addEventListener("install",function(e){e.waitUntil(caches.open("sr-v1").then(function(c){return c.addAll(["./"]);}));});self.addEventListener("fetch",function(e){e.respondWith(caches.match(e.request).then(function(r){return r||fetch(e.request);}));});';
     var blob=new Blob([sw],{type:'application/javascript'});
     navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(function(){});
   });
