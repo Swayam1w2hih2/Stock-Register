@@ -338,12 +338,50 @@ td{padding:8px 10px;border-bottom:1px solid #E8EEF6;vertical-align:middle}
       <input type="date" id="fdate-from" onchange="renderReg()" style="padding:7px;border:1.5px solid #D0D7E6;border-radius:8px;font-size:12px">
       <input type="date" id="fdate-to" onchange="renderReg()" style="padding:7px;border:1.5px solid #D0D7E6;border-radius:8px;font-size:12px">
       <button class="btn btn-o btn-sm" onclick="clearFil()">Clear</button>
-      <button class="btn btn-o btn-sm" onclick="exportCSV()">&#11015; CSV</button>
+      <button class="btn btn-o btn-sm" onclick="downloadRegExcel()" style="background:#1F7A4D;color:#fff;border-color:#1F7A4D">&#11015; Download All (Excel)</button>
+      <button class="btn btn-o btn-sm" id="bulk-edit-btn" onclick="toggleBulkEdit()" style="display:none;background:#5B3287;color:#fff;border-color:#5B3287">&#9998; Bulk Edit</button>
       <span style="font-size:12px;color:#888" id="rcnt"></span>
     </div>
+
+    <!-- BULK EDIT PANEL -->
+    <div id="bulk-panel" style="display:none;background:#F3EDFB;border:2px solid #C9A8E8;border-radius:12px;padding:14px;margin-bottom:12px">
+      <div style="font-weight:700;color:#5B3287;margin-bottom:10px;font-size:14px">&#9998; Bulk Edit — <span id="bulk-sel-count">0</span> entries selected</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end">
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#555;display:block;margin-bottom:3px">Field to change</label>
+          <select id="bulk-field" onchange="bulkFieldChanged()" style="padding:8px;border:1.5px solid #C9A8E8;border-radius:8px;font-size:13px;min-width:130px">
+            <option value="">-- Select field --</option>
+            <option value="godown">Godown</option>
+            <option value="party">Party / Supplier</option>
+            <option value="date">Date</option>
+            <option value="type">Type (IN/OUT)</option>
+            <option value="remarks">Remarks</option>
+            <option value="invoice">Invoice No.</option>
+          </select>
+        </div>
+        <div id="bulk-val-wrap" style="display:none">
+          <label style="font-size:11px;font-weight:700;color:#555;display:block;margin-bottom:3px">New value</label>
+          <input type="text" id="bulk-val-text" placeholder="New value..." style="padding:8px;border:1.5px solid #C9A8E8;border-radius:8px;font-size:13px;min-width:160px;display:none">
+          <select id="bulk-val-godown" style="padding:8px;border:1.5px solid #C9A8E8;border-radius:8px;font-size:13px;min-width:160px;display:none"></select>
+          <select id="bulk-val-type" style="padding:8px;border:1.5px solid #C9A8E8;border-radius:8px;font-size:13px;min-width:160px;display:none">
+            <option value="IN">IN (Stock In)</option>
+            <option value="OUT">OUT (Stock Out)</option>
+          </select>
+          <input type="date" id="bulk-val-date" style="padding:8px;border:1.5px solid #C9A8E8;border-radius:8px;font-size:13px;min-width:160px;display:none">
+        </div>
+        <button onclick="applyBulkEdit()" style="padding:9px 18px;background:#5B3287;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">&#10003; Apply</button>
+        <button onclick="cancelBulkEdit()" style="padding:9px 14px;background:#eee;color:#555;border:none;border-radius:8px;font-size:13px;cursor:pointer">Cancel</button>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:8px">
+        <button onclick="bulkSelectAll()" style="padding:6px 12px;background:#fff;border:1.5px solid #C9A8E8;border-radius:6px;font-size:12px;cursor:pointer;color:#5B3287;font-weight:700">&#9745; Select All Filtered</button>
+        <button onclick="bulkSelectNone()" style="padding:6px 12px;background:#fff;border:1.5px solid #C9A8E8;border-radius:6px;font-size:12px;cursor:pointer;color:#888">&#9744; Deselect All</button>
+      </div>
+    </div>
+
     <div class="tb-wrap">
       <table>
         <thead><tr>
+          <th id="bulk-chk-col" style="display:none;width:32px"><input type="checkbox" id="bulk-chk-all" onchange="bulkToggleAll(this.checked)" title="Select all"></th>
           <th>Date</th><th>Item</th><th>Type</th><th>Qty</th>
           <th>Party</th><th>Invoice No.</th><th>Staff</th><th>Remarks</th><th style="text-align:center">&#9989; Reconciled</th><th style="text-align:center">Status</th>
           <th class="fth">Run IN</th><th>Run OUT</th>
@@ -810,6 +848,7 @@ function initApp(){
   document.getElementById('user-chip').innerHTML = '&#128100; ' + currentUser.name;
   document.getElementById('nav-admin').style.display = currentUser.role==='admin' ? 'flex' : 'none';
   document.getElementById('nav-rec').style.display = currentUser.role==='admin' ? 'flex' : 'none';
+  if(currentUser.role==='admin') document.getElementById('bulk-edit-btn').style.display='inline-flex';
   var cos = userCos();
   curAddCo = cos[0];
   curRegCo = cos[0];
@@ -1225,15 +1264,36 @@ function renderReg(){
   });
   var tbody=document.getElementById('rtbody');
   if(!filt.length){tbody.innerHTML='<tr><td colspan="15" class="empty">No entries for '+companies[curRegCo]+'</td></tr>';document.getElementById('rcnt').textContent='';return;}
-  
+
+  // compute running totals for ALL filtered entries first
   var itemRunning={};
-  tbody.innerHTML=filt.map(function(e){
+  filt.forEach(function(e){
     if(!itemRunning[e.item])itemRunning[e.item]={in:0,out:0};
     if(e.type==='IN')itemRunning[e.item].in+=e.qty;
     else itemRunning[e.item].out+=e.qty;
-    var ri=itemRunning[e.item].in,ro=itemRunning[e.item].out;
+  });
+
+  // show only last 5 on screen
+  var SHOW = 5;
+  var displayed = filt.slice(-SHOW);
+  var total = filt.length;
+
+  // running totals up to (but not including) displayed slice
+  var itemRunPre={};
+  filt.slice(0, total - displayed.length).forEach(function(e){
+    if(!itemRunPre[e.item])itemRunPre[e.item]={in:0,out:0};
+    if(e.type==='IN')itemRunPre[e.item].in+=e.qty;
+    else itemRunPre[e.item].out+=e.qty;
+  });
+
+  tbody.innerHTML=displayed.map(function(e){
+    if(!itemRunPre[e.item])itemRunPre[e.item]={in:0,out:0};
+    if(e.type==='IN')itemRunPre[e.item].in+=e.qty;
+    else itemRunPre[e.item].out+=e.qty;
+    var ri=itemRunPre[e.item].in,ro=itemRunPre[e.item].out;
     var bal=ri-ro,bc=bal<0?'bneg':bal<10?'bwarn':'bpos';
-    return '<tr>'+
+    var chkCell = bulkMode ? '<td style="text-align:center"><input type="checkbox" class="bulk-row-chk" data-id="'+e.id+'" '+(bulkSelected[e.id]?'checked':'')+' onchange="bulkRowCheck('+e.id+',this.checked)"></td>' : '';
+    return '<tr id="brow-'+e.id+'" style="'+(bulkSelected[e.id]?'background:#F3EDFB;':'')+'">'+ chkCell +
       '<td style="white-space:nowrap;color:#666;font-size:11px">'+e.date+'</td>'+
       '<td style="font-weight:600">'+e.item+'</td>'+
       '<td><span class="badge '+(e.type==='IN'?'bin':'bout')+'">'+(e.type==='IN'?'&#9650;IN':'&#9660;OUT')+'</span></td>'+
@@ -1245,7 +1305,7 @@ function renderReg(){
       '<td class="nc">'+ri.toLocaleString()+'</td>'+
       '<td class="nc">'+ro.toLocaleString()+'</td>'+
       '<td class="bal '+bc+'">'+bal.toLocaleString()+'</td>'+
-      '<td>'+(currentUser.role==='admin'?'<button class="btn-d" onclick="delEntry('+e.id+')">&#128465;</button>':'')+'</td>'+
+      '<td>'+(currentUser.role==='admin'&&!bulkMode?'<button class="btn-d" onclick="delEntry('+e.id+')">&#128465;</button>':'')+'</td>'+
       '<td style="text-align:center">'+
         (currentUser.role==='admin'
           ?'<input type="checkbox" '+(e.reconciled?'checked':'')+' onchange="toggleReconciled('+e.id+',this.checked)" title="Mark as reconciled">'
@@ -1260,7 +1320,16 @@ function renderReg(){
       '</td>'+
     '</tr>';
   }).join('');
-  document.getElementById('rcnt').textContent=filt.length+' entr'+(filt.length===1?'y':'ies');
+
+  // show/hide checkbox header col
+  var chkCol = document.getElementById('bulk-chk-col');
+  if(chkCol) chkCol.style.display = bulkMode ? '' : 'none';
+
+  var msg = total <= SHOW
+    ? total+' entr'+(total===1?'y':'ies')
+    : 'Last '+SHOW+' of '+total+' entries — download Excel for full list';
+  document.getElementById('rcnt').textContent=msg;
+  updateBulkCount();
 }
 
 function clearFil(){
@@ -1308,6 +1377,60 @@ function exportCSV(){
   var csv=[hdr].concat(rows).map(function(r){return r.map(function(v){return'"'+(v||'')+'"';}).join(',');}).join('\n');
   var a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='stock_'+companies[curRegCo].replace(/\s/g,'_')+'.csv';a.click();
   toast('Exported');
+}
+
+function downloadRegExcel(){
+  // Apply same filters as renderReg
+  var srch=(document.getElementById('srch').value||'').toLowerCase();
+  var ft  =document.getElementById('ftype').value;
+  var dfrom=(document.getElementById('fdate-from')||{}).value||'';
+  var dto  =(document.getElementById('fdate-to')||{}).value||'';
+  var frec =(document.getElementById('frec')||{value:''}).value||'';
+  var filt=entries.filter(function(e){
+    if(e.co!==curRegCo)return false;
+    if(ft&&e.type!==ft)return false;
+    if(srch&&!(e.item.toLowerCase().includes(srch)||(e.staff||'').toLowerCase().includes(srch)||(e.party||'').toLowerCase().includes(srch)))return false;
+    if(dfrom&&e.date<dfrom)return false;
+    if(dto&&e.date>dto)return false;
+    if(frec==='matched'&&!e.reconciled)return false;
+    if(frec==='reviewed'&&e.reviewed!=='cross')return false;
+    if(frec==='pending'&&(e.reconciled||e.reviewed==='cross'))return false;
+    return true;
+  });
+  if(!filt.length){toast('No entries to download');return;}
+
+  // Build rows with running balance per item
+  var itemRunning={};
+  var hdr=['Date','Item','Type','Qty','Party','Invoice No.','Staff','Remarks','Godown','Running IN','Running OUT','Balance'];
+  var rows=filt.map(function(e){
+    if(!itemRunning[e.item])itemRunning[e.item]={in:0,out:0};
+    if(e.type==='IN')itemRunning[e.item].in+=e.qty;
+    else itemRunning[e.item].out+=e.qty;
+    var ri=itemRunning[e.item].in, ro=itemRunning[e.item].out;
+    return [e.date,e.item,e.type,e.qty,e.party||'',e.invoice||'',e.staff||'',e.remarks||'',e.godown||'',ri,ro,ri-ro];
+  });
+
+  // Build Excel XML (SpreadsheetML)
+  function esc(v){return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+  function cell(v){
+    if(typeof v==='number') return '<Cell><Data ss:Type="Number">'+v+'</Data></Cell>';
+    return '<Cell><Data ss:Type="String">'+esc(v)+'</Data></Cell>';
+  }
+  var xml='<?xml version="1.0"?><?mso-application progid="Excel.Sheet"?>';
+  xml+='<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">';
+  xml+='<Worksheet ss:Name="Stock Register"><Table>';
+  xml+='<Row>'+hdr.map(function(h){return '<Cell ss:StyleID="hdr"><Data ss:Type="String">'+esc(h)+'</Data></Cell>';}).join('')+'</Row>';
+  rows.forEach(function(r){xml+='<Row>'+r.map(cell).join('')+'</Row>';});
+  xml+='</Table></Worksheet></Workbook>';
+
+  var blob=new Blob([xml],{type:'application/vnd.ms-excel'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;
+  a.download='StockRegister_'+companies[curRegCo].replace(/\s+/g,'_')+'_'+today()+'.xls';
+  a.click();
+  setTimeout(function(){URL.revokeObjectURL(url);},2000);
+  toast('Downloading '+filt.length+' entries...');
 }
 
 // ── SUMMARY ──
@@ -2478,6 +2601,137 @@ function populateClearCoSelect(){
     opt.value = i; opt.textContent = c;
     sel.appendChild(opt);
   });
+}
+
+// ── BULK EDIT ──
+var bulkMode = false;
+var bulkSelected = {}; // id -> true
+var _bulkFiltCache = [];
+
+function toggleBulkEdit(){
+  bulkMode = !bulkMode;
+  bulkSelected = {};
+  var panel = document.getElementById('bulk-panel');
+  var btn   = document.getElementById('bulk-edit-btn');
+  panel.style.display = bulkMode ? 'block' : 'none';
+  btn.textContent = bulkMode ? '✕ Exit Bulk Edit' : '✎ Bulk Edit';
+  btn.style.background = bulkMode ? '#9C0006' : '#5B3287';
+  btn.style.borderColor = bulkMode ? '#9C0006' : '#5B3287';
+  renderReg();
+}
+
+function cancelBulkEdit(){
+  bulkMode = false;
+  bulkSelected = {};
+  document.getElementById('bulk-panel').style.display = 'none';
+  var btn = document.getElementById('bulk-edit-btn');
+  btn.textContent = '✎ Bulk Edit';
+  btn.style.background = '#5B3287';
+  btn.style.borderColor = '#5B3287';
+  renderReg();
+}
+
+function bulkRowCheck(id, checked){
+  if(checked) bulkSelected[id] = true;
+  else delete bulkSelected[id];
+  var row = document.getElementById('brow-'+id);
+  if(row) row.style.background = checked ? '#F3EDFB' : '';
+  updateBulkCount();
+}
+
+function bulkToggleAll(checked){
+  document.querySelectorAll('.bulk-row-chk').forEach(function(chk){
+    var id = parseInt(chk.dataset.id);
+    chk.checked = checked;
+    if(checked) bulkSelected[id] = true;
+    else delete bulkSelected[id];
+    var row = document.getElementById('brow-'+id);
+    if(row) row.style.background = checked ? '#F3EDFB' : '';
+  });
+  updateBulkCount();
+}
+
+function bulkSelectAll(){
+  // select all currently filtered entries (not just displayed 5)
+  var srch=(document.getElementById('srch').value||'').toLowerCase();
+  var ft  =document.getElementById('ftype').value;
+  var dfrom=(document.getElementById('fdate-from')||{}).value||'';
+  var dto  =(document.getElementById('fdate-to')||{}).value||'';
+  var filt=entries.filter(function(e){
+    if(e.co!==curRegCo)return false;
+    if(ft&&e.type!==ft)return false;
+    if(srch&&!(e.item.toLowerCase().includes(srch)||(e.staff||'').toLowerCase().includes(srch)||(e.party||'').toLowerCase().includes(srch)))return false;
+    if(dfrom&&e.date<dfrom)return false;
+    if(dto&&e.date>dto)return false;
+    return true;
+  });
+  filt.forEach(function(e){ bulkSelected[e.id]=true; });
+  renderReg();
+  toast(filt.length+' entries selected');
+}
+
+function bulkSelectNone(){
+  bulkSelected = {};
+  renderReg();
+}
+
+function updateBulkCount(){
+  var n = Object.keys(bulkSelected).length;
+  var el = document.getElementById('bulk-sel-count');
+  if(el) el.textContent = n;
+}
+
+function bulkFieldChanged(){
+  var field = document.getElementById('bulk-field').value;
+  var wrap  = document.getElementById('bulk-val-wrap');
+  var txt   = document.getElementById('bulk-val-text');
+  var gdSel = document.getElementById('bulk-val-godown');
+  var tySel = document.getElementById('bulk-val-type');
+  var dtFld = document.getElementById('bulk-val-date');
+  txt.style.display='none'; gdSel.style.display='none'; tySel.style.display='none'; dtFld.style.display='none';
+  if(!field){ wrap.style.display='none'; return; }
+  wrap.style.display='block';
+  if(field==='godown'){
+    gdSel.innerHTML='';
+    GODOWNS.forEach(function(g){ var o=document.createElement('option'); o.value=g; o.textContent=g; gdSel.appendChild(o); });
+    gdSel.style.display='block';
+  } else if(field==='type'){
+    tySel.style.display='block';
+  } else if(field==='date'){
+    dtFld.value=today(); dtFld.style.display='block';
+  } else {
+    txt.placeholder = field==='party'?'New supplier name...' : field==='remarks'?'New remarks...' : 'New value...';
+    txt.style.display='block';
+  }
+}
+
+function applyBulkEdit(){
+  var ids = Object.keys(bulkSelected).map(Number);
+  if(!ids.length){ toast('No entries selected'); return; }
+  var field = document.getElementById('bulk-field').value;
+  if(!field){ toast('Select a field to change'); return; }
+
+  var newVal;
+  if(field==='godown')      newVal = document.getElementById('bulk-val-godown').value;
+  else if(field==='type')   newVal = document.getElementById('bulk-val-type').value;
+  else if(field==='date')   newVal = document.getElementById('bulk-val-date').value;
+  else                      newVal = document.getElementById('bulk-val-text').value.trim();
+
+  if(!newVal){ toast('Enter a new value'); return; }
+  if(!confirm('Apply "'+field+' = '+newVal+'" to '+ids.length+' entries?')) return;
+
+  entries.forEach(function(e){
+    if(bulkSelected[e.id]){
+      e[field] = newVal;
+    }
+  });
+
+  persist().then(function(){
+    toast('✓ Updated '+ids.length+' entries');
+    bulkSelected = {};
+    renderReg();
+    updateBulkCount();
+  }).catch(function(err){ toast('Error: '+err.message); });
 }
 
 // ── EXCEL IMPORT ──
