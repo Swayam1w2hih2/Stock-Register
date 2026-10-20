@@ -8,6 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="Stock Register">
 <meta name="theme-color" content="#1F3864">
 <link rel="manifest" href="./manifest.json">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#1F3864">
 <title>Stock Register</title>
@@ -203,6 +204,10 @@ td{padding:8px 10px;border-bottom:1px solid #E8EEF6;vertical-align:middle}
 /* Opening Stock button style */
 .type-btn.open { background: #F3EDFB; border-color: #C9A8E8; color: #5B3287; }
 .type-btn.open.on { background: #5B3287; border-color: #5B3287; color: #fff; }
+.type-btn.dmg { background: #FFF4E5; border-color: #F0A030; color: #8B4500; }
+.type-btn.dmg.on { background: #E07000; border-color: #E07000; color: #fff; }
+.party-new-btn { background: none; border: 1.5px dashed #1F3864; color: #1F3864; padding: 8px 12px; border-radius: 8px; font-size: 13px; cursor: pointer; width: 100%; margin-top: 4px; }
+.party-new-btn:hover { background: #EEF3FF; }
 </style>
 </head>
 <body>
@@ -258,6 +263,7 @@ td{padding:8px 10px;border-bottom:1px solid #E8EEF6;vertical-align:middle}
         <button class="type-btn in on" id="btn-in" onclick="setType('IN')">&#9650; STOCK IN<span class="sub">Goods received</span></button>
         <button class="type-btn out" id="btn-out" onclick="setType('OUT')">&#9660; STOCK OUT<span class="sub">Goods issued / sold</span></button>
         <button class="type-btn open" id="btn-open" onclick="setType('OPEN')">&#9632; OPENING STOCK<span class="sub">Initial stock entry</span></button>
+        <button class="type-btn dmg" id="btn-dmg" onclick="setType('DMG')">&#9888; DAMAGE<span class="sub">Write off / loss</span></button>
       </div>
     </div>
     <div class="card">
@@ -279,7 +285,20 @@ td{padding:8px 10px;border-bottom:1px solid #E8EEF6;vertical-align:middle}
           </div>
         </div>
         <div class="fl"><label>Unit</label><input type="text" id="fu" value="Pcs" readonly style="background:#EAF3DE;color:#27500A;font-weight:700;cursor:not-allowed;border-color:#97C459"></div>
-        <div class="fl"><label id="plbl">From — Supplier *</label><input type="text" id="fp" placeholder="Supplier name" list="party-datalist" autocomplete="off"><datalist id="party-datalist"></datalist></div>
+        <div class="fl" id="godown-field" style="display:none;grid-column:1/-1">
+          <label>Godown *</label>
+          <select id="fgodown-select" onchange="godownSelectChange()" style="border:1.5px solid #1F3864;font-weight:bold;background:#FFF;">
+            <option value="">-- Select Godown --</option>
+          </select>
+          <input type="text" id="fgodown-new" placeholder="Type new godown name..." style="display:none;margin-top:6px;" oninput="godownNewInput(this.value)" autocomplete="off">
+        </div>
+        <div class="fl">
+          <label id="plbl">From — Supplier *</label>
+          <select id="fp-select" onchange="partySelectChange()" style="border:1.5px solid #ddd;background:#FFF;">
+            <option value="">-- Select Party --</option>
+          </select>
+          <input type="text" id="fp" placeholder="Type new party name..." style="display:none;margin-top:6px;" list="party-datalist" autocomplete="off"><datalist id="party-datalist"></datalist>
+        </div>
         <div class="fl"><label>Invoice No. *</label><input type="text" id="finv" placeholder="e.g. INV-2024-001"></div>
         <div class="fl"><label>Remarks</label><input type="text" id="fr" placeholder="Optional notes"></div>
         <div class="fl"><label>Verified By</label><input type="text" id="fv" placeholder="Owner / Supervisor"></div>
@@ -436,6 +455,70 @@ td{padding:8px 10px;border-bottom:1px solid #E8EEF6;vertical-align:middle}
       <p style="font-size:12px;color:#888;margin-bottom:12px">Record of every entry deleted by an admin, including who deleted it and when.</p>
       <div id="deleted-log-list"></div>
     </div>
+
+    <!-- EXCEL IMPORT -->
+    <div class="card" style="border:2px solid #1F7A4D;">
+      <div class="card-hd" style="background:#F0FFF7;color:#1F7A4D;">&#128196; Import Opening Stock from Excel</div>
+      <p style="font-size:12px;color:#666;margin-bottom:14px;">Upload your stock Excel file, pick the sheet and column, then bulk-import as Opening Stock entries.</p>
+
+      <div class="fl" style="margin-bottom:10px">
+        <label>Select Company</label>
+        <select id="imp-co" style="border:1.5px solid #ddd;font-size:14px;padding:10px;border-radius:8px;width:100%"></select>
+      </div>
+      <div class="fl" style="margin-bottom:10px">
+        <label>Select Godown</label>
+        <select id="imp-godown" style="border:1.5px solid #ddd;font-size:14px;padding:10px;border-radius:8px;width:100%"></select>
+      </div>
+      <div class="fl" style="margin-bottom:10px">
+        <label>Date for Opening Stock entries</label>
+        <input type="date" id="imp-date" style="border:1.5px solid #ddd;font-size:14px;padding:10px;border-radius:8px;width:100%">
+      </div>
+      <div class="fl" style="margin-bottom:14px">
+        <label>Upload Excel File (.xlsx)</label>
+        <input type="file" id="imp-file" accept=".xlsx,.xls" style="border:1.5px solid #ddd;font-size:14px;padding:10px;border-radius:8px;width:100%;background:#fff" onchange="excelFileSelected(this)">
+      </div>
+
+      <div id="imp-sheet-row" style="display:none;margin-bottom:10px">
+        <div class="fl" style="margin-bottom:10px">
+          <label>Select Sheet</label>
+          <select id="imp-sheet" onchange="excelSheetSelected()" style="border:1.5px solid #ddd;font-size:14px;padding:10px;border-radius:8px;width:100%"></select>
+        </div>
+        <div id="imp-col-row" style="display:none">
+          <div class="fl" style="margin-bottom:10px">
+            <label>Item Name Column</label>
+            <select id="imp-col-item" onchange="updateImportPreview()" style="border:1.5px solid #ddd;font-size:14px;padding:10px;border-radius:8px;width:100%"></select>
+          </div>
+          <div class="fl" style="margin-bottom:10px">
+            <label>Quantity Column</label>
+            <select id="imp-col-qty" onchange="updateImportPreview()" style="border:1.5px solid #ddd;font-size:14px;padding:10px;border-radius:8px;width:100%"></select>
+          </div>
+          <div id="imp-preview" style="margin-bottom:14px;background:#F8FFF8;border:1px solid #B2DFC2;border-radius:8px;padding:12px;font-size:12px;max-height:200px;overflow-y:auto;display:none"></div>
+          <button class="btn btn-p" onclick="runExcelImport()" style="background:#1F7A4D;width:100%">&#128196; Import Opening Stock Entries</button>
+        </div>
+      </div>
+      <div id="imp-status" style="font-size:13px;margin-top:8px;color:#1F7A4D;display:none"></div>
+    </div>
+
+    <!-- DANGER ZONE -->
+    <div class="card" style="border:2px solid #E53935;">
+      <div class="card-hd" style="background:#FFF0F0;color:#B71C1C;">&#9888; Danger Zone</div>
+      <p style="font-size:13px;color:#555;margin-bottom:14px;">These actions <strong>cannot be undone</strong>. Use with caution.</p>
+
+      <div style="margin-bottom:16px;padding:14px;background:#FFF8F8;border-radius:10px;border:1px solid #FFCDD2;">
+        <div style="font-weight:700;color:#B71C1C;margin-bottom:6px;">&#128465; Clear All Stock Entries</div>
+        <p style="font-size:12px;color:#666;margin-bottom:10px;">Removes ALL stock entries from the database. Users, companies, party names and godowns are kept. Use this when you want to start fresh (e.g. new financial year).</p>
+        <button class="btn" onclick="confirmClearEntries()" style="background:#E53935;color:#fff;border:none;font-weight:700;padding:12px 20px;border-radius:8px;font-size:14px;">&#128465; Clear All Entries</button>
+      </div>
+
+      <div style="padding:14px;background:#FFF8F8;border-radius:10px;border:1px solid #FFCDD2;">
+        <div style="font-weight:700;color:#B71C1C;margin-bottom:6px;">&#128465; Clear Entries for One Company</div>
+        <p style="font-size:12px;color:#666;margin-bottom:10px;">Removes all stock entries for a specific company only.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <select id="clear-co-select" style="flex:1;min-width:140px;padding:10px;border-radius:8px;border:1.5px solid #ddd;font-size:14px;"></select>
+          <button class="btn" onclick="confirmClearCompany()" style="background:#E53935;color:#fff;border:none;font-weight:700;padding:10px 16px;border-radius:8px;font-size:14px;">&#128465; Clear</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- RECONCILIATION PAGE -->
@@ -574,6 +657,7 @@ var currentUser = null;
 
 var CUSTOM_PRODUCTS = [];
 var PARTIES = [];
+var GODOWNS = ['Laketown','ChinaMandir'];
 var DELETED_LOG = [];
 var curAddCo = 0;
 var curRegCo = 0;
@@ -626,6 +710,7 @@ function persist(){
     nid: nid,
     customProducts: CUSTOM_PRODUCTS,
     parties: PARTIES,
+    godowns: GODOWNS,
     deletedLog: DELETED_LOG
   };
   return sbSet(data);
@@ -656,12 +741,14 @@ function loadFromCloud(cb){
     if(data && data.nid) nid = data.nid;
     if(data && data.customProducts) CUSTOM_PRODUCTS = data.customProducts;
     if(data && data.parties) PARTIES = data.parties;
+    if(data && data.godowns && data.godowns.length) GODOWNS = data.godowns;
     if(data && data.deletedLog) DELETED_LOG = data.deletedLog;
 
     entries.forEach(function(e){
       if(e.party) addPartyToList(e.party, false);
     });
     renderPartyDatalist();
+  renderGodownSelect();
     selectAddCo(curAddCo);
     showLoader(false);
     cb();
@@ -807,25 +894,145 @@ function setType(t){
   document.getElementById('btn-in').classList.toggle('on',t==='IN');
   document.getElementById('btn-out').classList.toggle('on',t==='OUT');
   document.getElementById('btn-open').classList.toggle('on',t==='OPEN');
+  document.getElementById('btn-dmg').classList.toggle('on',t==='DMG');
+
+  // Show/hide godown field — only for OPEN and DMG
+  var godownField = document.getElementById('godown-field');
+  godownField.style.display = (t==='OPEN'||t==='DMG') ? '' : 'none';
+
+  // Reset godown
+  document.getElementById('fgodown-select').value = '';
+  document.getElementById('fgodown-new').style.display = 'none';
+  document.getElementById('fgodown-new').value = '';
+
+  var fpSel = document.getElementById('fp-select');
+  var fpInput = document.getElementById('fp');
+
   if(t==='OPEN'){
-    document.getElementById('plbl').textContent='Source';
-    document.getElementById('fp').value='Opening Stock';
-    document.getElementById('fp').readOnly=true;
-    document.getElementById('fp').style.background='#F3EDFB';
-    document.getElementById('finv').value='OPENING';
-    document.getElementById('finv').readOnly=true;
-    document.getElementById('finv').style.background='#F3EDFB';
+    document.getElementById('plbl').textContent = 'Source';
+    // For OPEN — hide party field, auto-set to Opening Stock
+    fpSel.style.display = 'none';
+    fpInput.style.display = 'none';
+    fpInput.value = 'Opening Stock';
+    document.getElementById('finv').value = 'OPENING';
+    document.getElementById('finv').readOnly = true;
+    document.getElementById('finv').style.background = '#F3EDFB';
+  } else if(t==='DMG'){
+    document.getElementById('plbl').textContent = 'Reason / Notes';
+    fpSel.style.display = 'none';
+    fpInput.style.display = '';
+    fpInput.value = '';
+    fpInput.placeholder = 'e.g. Expired, Broken, Theft...';
+    fpInput.readOnly = false;
+    fpInput.style.background = '';
+    document.getElementById('finv').readOnly = false;
+    document.getElementById('finv').style.background = '';
+    document.getElementById('finv').value = 'DAMAGE';
+    document.getElementById('finv').readOnly = true;
+    document.getElementById('finv').style.background = '#FFF4E5';
   } else {
-    document.getElementById('plbl').textContent=t==='IN'?'From — Supplier *':'To — Customer / Reason *';
-    document.getElementById('fp').placeholder=t==='IN'?'Supplier name':'Customer / Sale / Damage';
-    document.getElementById('fp').readOnly=false;
-    document.getElementById('fp').style.background='';
-    document.getElementById('finv').readOnly=false;
-    document.getElementById('finv').style.background='';
-    if(document.getElementById('fp').value==='Opening Stock') document.getElementById('fp').value='';
-    if(document.getElementById('finv').value==='OPENING') document.getElementById('finv').value='';
+    document.getElementById('plbl').textContent = t==='IN' ? 'From — Supplier *' : 'To — Customer *';
+    fpSel.style.display = '';
+    fpInput.style.display = 'none';
+    fpInput.value = '';
+    fpInput.readOnly = false;
+    fpInput.style.background = '';
+    document.getElementById('finv').readOnly = false;
+    document.getElementById('finv').style.background = '';
+    document.getElementById('finv').value = '';
+    renderPartySelect();
   }
   prevBal();
+}
+
+function partySelectChange(){
+  var sel = document.getElementById('fp-select');
+  var inp = document.getElementById('fp');
+  if(sel.value === '__new__'){
+    inp.style.display = '';
+    inp.value = '';
+    inp.focus();
+  } else {
+    inp.style.display = 'none';
+    inp.value = sel.value;
+  }
+}
+
+function renderPartySelect(){
+  var sel = document.getElementById('fp-select');
+  var cur = document.getElementById('fp').value;
+  sel.innerHTML = '<option value="">-- Select Party --</option>';
+  PARTIES.forEach(function(p){
+    var opt = document.createElement('option');
+    opt.value = p; opt.textContent = p;
+    if(p===cur) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  var newOpt = document.createElement('option');
+  newOpt.value = '__new__';
+  newOpt.textContent = '+ Type new name...';
+  sel.appendChild(newOpt);
+}
+
+function godownSelectChange(){
+  var sel = document.getElementById('fgodown-select');
+  var inp = document.getElementById('fgodown-new');
+  if(sel.value === '__new__'){
+    inp.style.display = '';
+    inp.value = '';
+    inp.focus();
+  } else {
+    inp.style.display = 'none';
+  }
+}
+
+function godownNewInput(val){
+  // live update — nothing needed, we read value on save
+}
+
+function getGodownValue(){
+  var sel = document.getElementById('fgodown-select');
+  var inp = document.getElementById('fgodown-new');
+  if(sel.value === '__new__') return inp.value.trim();
+  return sel.value;
+}
+
+function getPartyValue(){
+  var sel = document.getElementById('fp-select');
+  var inp = document.getElementById('fp');
+  if(!sel || sel.style.display==='none') return inp.value.trim();
+  if(sel.value === '__new__') return inp.value.trim();
+  return sel.value || inp.value.trim();
+}
+
+function renderGodownSelect(){
+  var sel = document.getElementById('fgodown-select');
+  if(!sel) return;
+  var cur = sel.value;
+  sel.innerHTML = '<option value="">-- Select Godown --</option>';
+  GODOWNS.forEach(function(g){
+    var opt = document.createElement('option');
+    opt.value = g; opt.textContent = g;
+    if(g===cur) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  var newOpt = document.createElement('option');
+  newOpt.value = '__new__';
+  newOpt.textContent = '+ Type new godown...';
+  sel.appendChild(newOpt);
+}
+
+function addGodownToList(name){
+  var clean = (name||'').trim();
+  if(!clean) return false;
+  var exists = GODOWNS.some(function(g){ return g.toLowerCase()===clean.toLowerCase(); });
+  if(!exists){
+    GODOWNS.push(clean);
+    GODOWNS.sort(function(a,b){return a.toLowerCase().localeCompare(b.toLowerCase());});
+    renderGodownSelect();
+    return true;
+  }
+  return false;
 }
 
 function renderSelect(list){
@@ -906,19 +1113,31 @@ function saveEntry(){
   var sel= document.getElementById('fi');
   var it = (sel&&sel.value?sel.value:document.getElementById('fi-search').value).trim();
   var q  = parseInt(document.getElementById('fq').value);
-  var p  = document.getElementById('fp').value.trim();
+  // party now handled by getPartyValue() above
   var v  = document.getElementById('fv').value.trim();
   var r  = document.getElementById('fr').value.trim();
   var inv = (document.getElementById('finv')||{value:''}).value.trim();
   var s  = currentUser.name;
+  var p = getPartyValue();
+  var godown = (curType==='OPEN'||curType==='DMG') ? getGodownValue() : '';
   if(!d||!it||!q||q<1){ toast('Fill all required (*) fields'); return; }
-  if(curType!=='OPEN'&&!p){ toast('Fill all required (*) fields'); return; }
-  if(curType!=='OPEN'&&!inv){ toast('Fill all required (*) fields including Invoice No.'); return; }
-  var entryType=curType==='OPEN'?'IN':curType;
-  var entry={id:nid++,co:curAddCo,date:d,item:it,unit:'Pcs',type:entryType,qty:q,party:p||'Opening Stock',staff:s,verified:v,remarks:r,invoice:inv||'OPENING',openingStock:curType==='OPEN'};
+  if((curType==='OPEN'||curType==='DMG')&&!godown){ toast('Please select or enter a Godown'); return; }
+  if(curType!=='OPEN'&&curType!=='DMG'&&!p){ toast('Please select or enter a Party name'); return; }
+  var entryType = curType==='OPEN'?'IN':(curType==='DMG'?'OUT':curType);
+  var entry = {
+    id:nid++, co:curAddCo, date:d, item:it, unit:'Pcs',
+    type:entryType, qty:q,
+    party: p || (curType==='OPEN'?'Opening Stock':''),
+    staff:s, verified:v, remarks:r,
+    invoice: inv || (curType==='OPEN'?'OPENING':(curType==='DMG'?'DAMAGE':'')),
+    openingStock: curType==='OPEN',
+    damage: curType==='DMG',
+    godown: godown || ''
+  };
   entries.push(entry);
   entries.sort(function(a,b){return a.date.localeCompare(b.date);});
   addPartyToList(p);
+  if(godown) addGodownToList(godown);
   updateEntCount();
   clearForm();
   
@@ -981,6 +1200,7 @@ function renderPartyDatalist(){
   dl.innerHTML = PARTIES.map(function(p){
     return '<option value="'+p.replace(/"/g,'&quot;')+'">';
   }).join('');
+  renderPartySelect();
 }
 
 function today(){ return new Date().toISOString().slice(0,10); }
@@ -1294,6 +1514,8 @@ function renderAdmin(){
   renderUserList();
   renderCustomProducts();
   renderDeletedLog();
+  populateClearCoSelect();
+  populateImportSelects();
 }
 
 function renderDeletedLog(){
@@ -2203,6 +2425,228 @@ if('serviceWorker' in navigator){
   }
   startApp();
 })();
+
+// ── CLEAR DATA FUNCTIONS ──
+function confirmClearEntries(){
+  if(!confirm('⚠ WARNING: This will permanently delete ALL stock entries for ALL companies.\n\nThis cannot be undone!\n\nAre you absolutely sure?')) return;
+  var code = prompt('Type DELETE to confirm:');
+  if((code||'').trim().toUpperCase() !== 'DELETE'){
+    toast('Cancelled — entries not cleared');
+    return;
+  }
+  DELETED_LOG = DELETED_LOG.concat(entries.map(function(e){
+    return {entry:e, deletedBy:currentUser.name, deletedAt:new Date().toISOString(), bulkClear:true};
+  }));
+  entries = [];
+  nid = 1;
+  persist().then(function(){
+    toast('✓ All entries cleared');
+    renderReg();
+    updateEntCount();
+  }).catch(function(e){ toast('Error: '+e.message); });
+}
+
+function confirmClearCompany(){
+  var sel = document.getElementById('clear-co-select');
+  var coIdx = parseInt(sel.value);
+  if(isNaN(coIdx)){ toast('Select a company first'); return; }
+  var coName = COMPANIES[coIdx] || ('Company '+(coIdx+1));
+  if(!confirm('⚠ WARNING: This will permanently delete ALL stock entries for '+coName+'.\n\nThis cannot be undone!\n\nAre you sure?')) return;
+  var code = prompt('Type DELETE to confirm:');
+  if((code||'').trim().toUpperCase() !== 'DELETE'){
+    toast('Cancelled');
+    return;
+  }
+  var removed = entries.filter(function(e){ return e.co===coIdx; });
+  DELETED_LOG = DELETED_LOG.concat(removed.map(function(e){
+    return {entry:e, deletedBy:currentUser.name, deletedAt:new Date().toISOString(), bulkClear:true};
+  }));
+  entries = entries.filter(function(e){ return e.co!==coIdx; });
+  persist().then(function(){
+    toast('✓ Entries for '+coName+' cleared');
+    renderReg();
+    updateEntCount();
+  }).catch(function(e){ toast('Error: '+e.message); });
+}
+
+function populateClearCoSelect(){
+  var sel = document.getElementById('clear-co-select');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">-- Select Company --</option>';
+  COMPANIES.forEach(function(c,i){
+    var opt = document.createElement('option');
+    opt.value = i; opt.textContent = c;
+    sel.appendChild(opt);
+  });
+}
+
+// ── EXCEL IMPORT ──
+var _impWorkbook = null;
+var _impSheetData = null;
+
+function populateImportSelects(){
+  var coSel = document.getElementById('imp-co');
+  var gdSel = document.getElementById('imp-godown');
+  var dateFld = document.getElementById('imp-date');
+  if(!coSel) return;
+  coSel.innerHTML = '<option value="">-- Select Company --</option>';
+  COMPANIES.forEach(function(c,i){
+    var opt = document.createElement('option');
+    opt.value = i; opt.textContent = c||'Company '+(i+1);
+    coSel.appendChild(opt);
+  });
+  gdSel.innerHTML = '<option value="">-- Select Godown --</option>';
+  GODOWNS.forEach(function(g){
+    var opt = document.createElement('option');
+    opt.value = g; opt.textContent = g;
+    gdSel.appendChild(opt);
+  });
+  if(!dateFld.value){
+    var t = new Date();
+    dateFld.value = t.toISOString().slice(0,10);
+  }
+}
+
+function excelFileSelected(input){
+  if(!input.files || !input.files[0]) return;
+  var file = input.files[0];
+  var reader = new FileReader();
+  reader.onload = function(e){
+    var data = new Uint8Array(e.target.result);
+    _impWorkbook = XLSX.read(data, {type:'array'});
+    var sheetSel = document.getElementById('imp-sheet');
+    sheetSel.innerHTML = '';
+    _impWorkbook.SheetNames.forEach(function(sn){
+      var opt = document.createElement('option');
+      opt.value = sn; opt.textContent = sn;
+      // auto-select sheet with "FINAL" in name
+      if(sn.toUpperCase().indexOf('FINAL')>=0) opt.selected = true;
+      sheetSel.appendChild(opt);
+    });
+    document.getElementById('imp-sheet-row').style.display='block';
+    excelSheetSelected();
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function excelSheetSelected(){
+  if(!_impWorkbook) return;
+  var sheetName = document.getElementById('imp-sheet').value;
+  var ws = _impWorkbook.Sheets[sheetName];
+  _impSheetData = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+  // Find first non-empty row as header
+  var headerRow = null;
+  var headerIdx = 0;
+  for(var i=0;i<Math.min(10,_impSheetData.length);i++){
+    var r = _impSheetData[i];
+    if(r.some(function(c){ return c && String(c).trim(); })){
+      headerRow = r;
+      headerIdx = i;
+      break;
+    }
+  }
+  if(!headerRow){ toast('Could not read sheet headers'); return; }
+  _impSheetData._headerIdx = headerIdx;
+  var cols = headerRow.map(function(c,i){ return {i:i, name:String(c).trim()||'Col '+(i+1)}; })
+                       .filter(function(c){ return c.name && c.name !== 'Col '+(c.i+1) || c.name; });
+  var itemSel = document.getElementById('imp-col-item');
+  var qtySel = document.getElementById('imp-col-qty');
+  itemSel.innerHTML = ''; qtySel.innerHTML = '';
+  cols.forEach(function(c){
+    var o1 = document.createElement('option'); o1.value=c.i; o1.textContent=c.name;
+    var o2 = document.createElement('option'); o2.value=c.i; o2.textContent=c.name;
+    // auto-guess: first col = item, col with "GODOWN" or first numeric col = qty
+    var nm = c.name.toUpperCase();
+    if(nm.indexOf('GODOWN')>=0 || nm.indexOf('STOCK')>=0 || nm==='QUANTITY') o2.selected=true;
+    if(c.i===0) o1.selected=true;
+    itemSel.appendChild(o1);
+    qtySel.appendChild(o2);
+  });
+  document.getElementById('imp-col-row').style.display='block';
+  updateImportPreview();
+}
+
+function updateImportPreview(){
+  if(!_impSheetData) return;
+  var itemCol = parseInt(document.getElementById('imp-col-item').value);
+  var qtyCol  = parseInt(document.getElementById('imp-col-qty').value);
+  var headerIdx = _impSheetData._headerIdx||0;
+  var rows = _impSheetData.slice(headerIdx+1);
+  var valid = rows.filter(function(r){
+    var item = String(r[itemCol]||'').trim();
+    var qty  = parseFloat(r[qtyCol]);
+    return item && !isNaN(qty) && qty > 0;
+  });
+  var preview = document.getElementById('imp-preview');
+  preview.style.display='block';
+  if(!valid.length){ preview.innerHTML='<em style="color:#888">No rows with valid item + positive quantity found.</em>'; return; }
+  var html = '<strong>'+valid.length+' items ready to import:</strong><br><br>';
+  valid.slice(0,20).forEach(function(r){
+    var item = String(r[itemCol]).trim();
+    var qty  = parseFloat(r[qtyCol]);
+    html += '• '+item+' — <strong>'+qty+'</strong><br>';
+  });
+  if(valid.length>20) html += '<em style="color:#888">… and '+(valid.length-20)+' more</em>';
+  preview.innerHTML = html;
+}
+
+function runExcelImport(){
+  var coIdx   = parseInt(document.getElementById('imp-co').value);
+  var godown  = document.getElementById('imp-godown').value.trim();
+  var dateVal = document.getElementById('imp-date').value;
+  var itemCol = parseInt(document.getElementById('imp-col-item').value);
+  var qtyCol  = parseInt(document.getElementById('imp-col-qty').value);
+
+  if(isNaN(coIdx)){ toast('Select a company'); return; }
+  if(!godown){ toast('Select a godown'); return; }
+  if(!dateVal){ toast('Select a date'); return; }
+  if(!_impSheetData){ toast('No sheet loaded'); return; }
+
+  var headerIdx = _impSheetData._headerIdx||0;
+  var rows = _impSheetData.slice(headerIdx+1);
+  var toAdd = [];
+  rows.forEach(function(r){
+    var item = String(r[itemCol]||'').trim();
+    var qty  = parseFloat(r[qtyCol]);
+    if(item && !isNaN(qty) && qty > 0){
+      toAdd.push({item:item, qty:qty});
+    }
+  });
+
+  if(!toAdd.length){ toast('No valid rows to import'); return; }
+  if(!confirm('Import '+toAdd.length+' Opening Stock entries for '+COMPANIES[coIdx]+' → Godown: '+godown+'?\n\nDate: '+dateVal)){ return; }
+
+  var staffName = currentUser.name;
+  toAdd.forEach(function(r){
+    var entry = {
+      id: nid++,
+      co: coIdx,
+      date: dateVal,
+      item: r.item,
+      unit: 'Pcs',
+      type: 'IN',
+      qty: r.qty,
+      party: 'Opening Stock',
+      staff: staffName,
+      verified: false,
+      remarks: 'Imported from Excel',
+      invoice: 'OPENING',
+      openingStock: true,
+      damage: false,
+      godown: godown
+    };
+    entries.push(entry);
+  });
+
+  persist().then(function(){
+    var st = document.getElementById('imp-status');
+    st.style.display='block';
+    st.textContent = '✓ Imported '+toAdd.length+' Opening Stock entries successfully!';
+    toast('✓ '+toAdd.length+' entries imported');
+    renderReg();
+    updateEntCount();
+  }).catch(function(e){ toast('Error saving: '+e.message); });
+}
 </script>
 </body>
 </html>
