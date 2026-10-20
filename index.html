@@ -2450,7 +2450,7 @@ function confirmClearCompany(){
   var sel = document.getElementById('clear-co-select');
   var coIdx = parseInt(sel.value);
   if(isNaN(coIdx)){ toast('Select a company first'); return; }
-  var coName = COMPANIES[coIdx] || ('Company '+(coIdx+1));
+  var coName = companies[coIdx] || ('Company '+(coIdx+1));
   if(!confirm('⚠ WARNING: This will permanently delete ALL stock entries for '+coName+'.\n\nThis cannot be undone!\n\nAre you sure?')) return;
   var code = prompt('Type DELETE to confirm:');
   if((code||'').trim().toUpperCase() !== 'DELETE'){
@@ -2473,7 +2473,7 @@ function populateClearCoSelect(){
   var sel = document.getElementById('clear-co-select');
   if(!sel) return;
   sel.innerHTML = '<option value="">-- Select Company --</option>';
-  COMPANIES.forEach(function(c,i){
+  companies.forEach(function(c,i){
     var opt = document.createElement('option');
     opt.value = i; opt.textContent = c;
     sel.appendChild(opt);
@@ -2490,7 +2490,7 @@ function populateImportSelects(){
   var dateFld = document.getElementById('imp-date');
   if(!coSel) return;
   coSel.innerHTML = '<option value="">-- Select Company --</option>';
-  COMPANIES.forEach(function(c,i){
+  companies.forEach(function(c,i){
     var opt = document.createElement('option');
     opt.value = i; opt.textContent = c||'Company '+(i+1);
     coSel.appendChild(opt);
@@ -2614,7 +2614,7 @@ function runExcelImport(){
   });
 
   if(!toAdd.length){ toast('No valid rows to import'); return; }
-  if(!confirm('Import '+toAdd.length+' Opening Stock entries for '+COMPANIES[coIdx]+' → Godown: '+godown+'?\n\nDate: '+dateVal)){ return; }
+  if(!confirm('Import '+toAdd.length+' Opening Stock entries for '+companies[coIdx]+' → Godown: '+godown+'?\n\nDate: '+dateVal)){ return; }
 
   var staffName = currentUser.name;
   toAdd.forEach(function(r){
