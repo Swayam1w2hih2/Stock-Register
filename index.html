@@ -52,7 +52,8 @@ body{font-family:Arial,sans-serif;font-size:14px;background:#F0F4FA;color:#1a1a1
 .page.active{display:block}
 
 /* ── COMPANY TABS ── */
-.co-tabs{display:flex;background:#fff;border-radius:10px;border:1px solid #E0E7EF;overflow:hidden;margin-bottom:14px}
+.co-tabs{display:flex;background:#fff;border-radius:10px;border:1px solid #E0E7EF;overflow-x:auto;overflow-y:hidden;margin-bottom:14px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.co-tabs::-webkit-scrollbar{display:none}
 .co-tab{flex:1;padding:11px 6px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;border:none;background:none;color:#888;border-bottom:3px solid transparent;transition:all .15s}
 .co-tab.active.c0{background:#1F3864;color:#fff;border-bottom-color:transparent}
 .co-tab.active.c1{background:#27500A;color:#fff;border-bottom-color:transparent}
@@ -111,7 +112,7 @@ body{font-family:Arial,sans-serif;font-size:14px;background:#F0F4FA;color:#1a1a1
 .tlb input{flex:1;min-width:140px}
 
 /* ── TABLE ── */
-.tb-wrap{overflow-x:auto;border-radius:10px;border:1px solid #E0E7EF}
+.tb-wrap{overflow-x:auto;border-radius:10px;border:1px solid #E0E7EF;-webkit-overflow-scrolling:touch}
 table{width:100%;border-collapse:collapse;font-size:12px;min-width:650px}
 thead th{background:#1F3864;color:#fff;padding:9px 10px;text-align:left;font-size:11px;font-weight:700;white-space:nowrap}
 th.fth{background:#0C447C}
@@ -444,7 +445,7 @@ td{padding:8px 10px;border-bottom:1px solid #E8EEF6;vertical-align:middle}
   <!-- SUMMARY PAGE -->
   <div class="page" id="page-sum">
     <!-- Company tabs + Group tab -->
-    <div style="display:flex;align-items:stretch;gap:0;overflow-x:auto;border-bottom:2px solid #E0E7EF;background:#fff;padding:0 8px">
+    <div style="display:flex;align-items:stretch;gap:0;overflow-x:auto;border-bottom:2px solid #E0E7EF;background:#fff;padding:0 8px;-webkit-overflow-scrolling:touch;scrollbar-width:none">
       <div class="co-tabs" id="sum-co-tabs" style="display:contents"></div>
       <button id="sum-group-btn" onclick="selectSumGroup()" style="flex-shrink:0;border:none;border-bottom:3px solid transparent;background:none;padding:10px 14px;font-size:12px;font-weight:700;color:#2196F3;cursor:pointer;white-space:nowrap">&#127758; GROUP VIEW</button>
     </div>
