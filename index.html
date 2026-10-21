@@ -1080,7 +1080,14 @@ function buildTabsFor(elId, cur, onClickFn){
   }).join('');
 }
 
-function buildRegTabs(){ buildTabsFor('reg-co-tabs', curRegCo, 'selectRegCo'); }
+function buildRegTabs(){
+  buildTabsFor('reg-co-tabs', curRegCo, 'selectRegCo');
+  // Append Damage tab (index 6) separately — always visible in register only
+  var el = document.getElementById('reg-co-tabs');
+  var dmgCnt = entries.filter(function(e){return e.co===DAMAGE_CO;}).length;
+  var isActive = curRegCo === DAMAGE_CO;
+  el.innerHTML += '<button class="co-tab" onclick="selectRegCo('+DAMAGE_CO+')" style="background:'+(isActive?'#C62828':'#FFF0F0')+';color:'+(isActive?'#fff':'#C62828')+';border-color:#C62828;font-weight:700">&#128465; Damage Pool<br><span style="font-size:10px;font-weight:400;opacity:.8">('+dmgCnt+')</span></button>';
+}
 function selectRegCo(i){ curRegCo=i; buildRegTabs(); renderReg(); }
 function buildSumTabs(){
   buildTabsFor('sum-co-tabs', curSumGroup ? -1 : curSumCo, 'selectSumCo');
