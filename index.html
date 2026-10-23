@@ -340,6 +340,7 @@ td{padding:8px 10px;border-bottom:1px solid #E8EEF6;vertical-align:middle}
             <div class="fl"><label>Batch Number</label><input type="text" id="fbatch" placeholder="e.g. BT-2024-001" autocomplete="off"></div>
             <div class="fl"><label>Serial Number</label><input type="text" id="fserial" placeholder="e.g. SN-00123" autocomplete="off"></div>
             <div class="fl"><label>Manufacturing Date</label><input type="date" id="fmfg"></div>
+            <div class="fl"><label>Expiry Date</label><input type="date" id="fexpiry"></div>
           </div>
         </div>
 
@@ -1414,9 +1415,10 @@ function saveEntry(){
   // Extra fields
   var batchNo='', serialNo='', mfgDate='', expiryDate='';
   if(curType==='OPEN'){
-    batchNo  = document.getElementById('fbatch').value.trim();
-    serialNo = document.getElementById('fserial').value.trim();
-    mfgDate  = document.getElementById('fmfg').value;
+    batchNo    = document.getElementById('fbatch').value.trim();
+    serialNo   = document.getElementById('fserial').value.trim();
+    mfgDate    = document.getElementById('fmfg').value;
+    expiryDate = document.getElementById('fexpiry').value;
   } else if(isDmg || isDmgt){
     batchNo    = document.getElementById('fdmg-batch').value.trim();
     serialNo   = document.getElementById('fdmg-serial').value.trim();
@@ -1507,7 +1509,7 @@ function saveEntry(){
 }
 
 function clearForm(){
-  ['fq','fp','fv','fr','finv','fbatch','fserial','fmfg','fdmg-batch','fdmg-serial','fdmg-mfg','fdmg-expiry'].forEach(function(id){
+  ['fq','fp','fv','fr','finv','fbatch','fserial','fmfg','fexpiry','fdmg-batch','fdmg-serial','fdmg-mfg','fdmg-expiry'].forEach(function(id){
     var el=document.getElementById(id); if(el) el.value='';
   });
   document.getElementById('fu').value='Pcs';
