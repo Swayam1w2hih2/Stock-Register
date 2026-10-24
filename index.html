@@ -284,18 +284,7 @@ td{padding:8px 10px;border-bottom:1px solid #E8EEF6;vertical-align:middle}
           <select id="add-company-select" onchange="selectAddCo(parseInt(this.value))" style="border: 1.5px solid #1F3864; font-weight: bold; background: #FFF;"></select>
         </div>
         <div class="fl"><label>Date *</label><input type="date" id="fd"></div>
-        <div class="fl"><label>Quantity *</label><input type="number" id="fq" min="1" placeholder="0" oninput="prevBal()"></div>
-        <div class="fl" style="grid-column:1/-1">
-          <label>Item Name * — filtered by selected company</label>
-          <input class="prod-search" id="fi-search" type="text" placeholder="&#128269; type to filter current company products..." oninput="filterProd(this.value)" autocomplete="off">
-          <select class="prod-list" id="fi" size="6" onclick="pickFromSelect()" onchange="pickFromSelect()"></select>
-          <div id="add-product-bar" style="display:none;margin-top:8px;background:#FFF8E7;border:1.5px dashed #E6A817;border-radius:8px;padding:9px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-            <span style="font-size:12px;color:#7A4B00;flex:1">&#10024; <strong id="new-prod-name"></strong> is not in this list</span>
-            <button class="btn btn-sm" onclick="addNewProduct()" style="background:#E6A817;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer">&#43; Add to list &amp; use</button>
-          </div>
-        </div>
-        <div class="fl"><label>Unit</label><input type="text" id="fu" value="Pcs" readonly style="background:#EAF3DE;color:#27500A;font-weight:700;cursor:not-allowed;border-color:#97C459"></div>
-        <div class="fl" id="godown-field" style="display:none;grid-column:1/-1">
+        <div class="fl" id="godown-field" style="display:none">
           <label>Godown *</label>
           <select id="fgodown-select" onchange="godownSelectChange()" style="border:1.5px solid #1F3864;font-weight:bold;background:#FFF;">
             <option value="">-- Select Godown --</option>
@@ -354,12 +343,30 @@ td{padding:8px 10px;border-bottom:1px solid #E8EEF6;vertical-align:middle}
           </div>
         </div>
       </div>
-      <div class="prev-bar">
-        &#128290; Balance after entry: &nbsp;<strong id="pbval" style="font-size:15px">—</strong>
-        &nbsp;<span class="pill bal">Balance = Total IN &minus; OUT</span>
+
+      <!-- ITEMS TABLE (replaces single item+qty) -->
+      <div style="margin-top:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-size:13px;font-weight:700;color:#1F3864">&#128230; Items *</span>
+          <span style="font-size:11px;color:#888">filtered by selected company</span>
+        </div>
+        <div style="background:#F5F7FA;border:1.5px solid #D0D7E6;border-radius:10px;padding:10px">
+          <div style="display:grid;grid-template-columns:1fr 90px 32px;gap:6px;margin-bottom:4px;padding:0 2px">
+            <span style="font-size:11px;font-weight:700;color:#555">ITEM NAME</span>
+            <span style="font-size:11px;font-weight:700;color:#555">QTY</span>
+            <span></span>
+          </div>
+          <div id="item-rows"></div>
+          <button onclick="addItemRow()" style="background:none;border:1.5px dashed #1F3864;color:#1F3864;padding:6px 0;border-radius:8px;font-size:12px;cursor:pointer;width:100%;margin-top:6px;font-weight:600">+ Add Item</button>
+        </div>
       </div>
-      <div style="display:flex;gap:10px">
-        <button class="btn btn-p" onclick="saveEntry()">&#10003; Save Entry</button>
+
+      <div class="prev-bar" style="margin-top:10px">
+        &#128290; Items to save: &nbsp;<strong id="pbval" style="font-size:15px">0</strong>
+        &nbsp;<span class="pill bal">each saved as a separate entry</span>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+        <button class="btn btn-p" onclick="saveEntry()">&#10003; Save Entries</button>
         <button class="btn btn-o" onclick="clearForm()">Clear</button>
       </div>
     </div>
@@ -420,8 +427,13 @@ td{padding:8px 10px;border-bottom:1px solid #E8EEF6;vertical-align:middle}
           <input type="text" id="bulk-val-text" placeholder="New value..." style="padding:8px;border:1.5px solid #C9A8E8;border-radius:8px;font-size:13px;min-width:160px;display:none">
           <select id="bulk-val-godown" style="padding:8px;border:1.5px solid #C9A8E8;border-radius:8px;font-size:13px;min-width:160px;display:none"></select>
           <select id="bulk-val-type" style="padding:8px;border:1.5px solid #C9A8E8;border-radius:8px;font-size:13px;min-width:160px;display:none">
-            <option value="IN">IN (Stock In)</option>
-            <option value="OUT">OUT (Stock Out)</option>
+            <option value="IN">▲ IN (Stock In)</option>
+            <option value="OUT">▼ OUT (Stock Out)</option>
+            <option value="OPEN">📦 OPEN (Opening Stock)</option>
+            <option value="DMGI">🔴 DMGI (Damage In)</option>
+            <option value="DMGO">🔴 DMGO (Damage Out)</option>
+            <option value="DMGT">🔴 DMGT (Damage Transfer)</option>
+            <option value="XFER">🔄 XFER (Godown Transfer)</option>
           </select>
           <input type="date" id="bulk-val-date" style="padding:8px;border:1.5px solid #C9A8E8;border-radius:8px;font-size:13px;min-width:160px;display:none">
         </div>
@@ -1018,6 +1030,7 @@ function initApp(){
   
   document.getElementById('fd').value = today();
   buildAllTabs();
+  initItemRows();
   selectAddCo(curAddCo);
   updateEntCount();
   goPage('add', document.getElementById('nav-add'));
@@ -1072,9 +1085,7 @@ function selectAddCo(i){
   PRODUCTS.sort(function(a,b){return a.toLowerCase().localeCompare(b.toLowerCase());});
   
   buildAddCompanyDropdown();
-  renderSelect(PRODUCTS);
-  document.getElementById('fi-search').value = '';
-  document.getElementById('add-product-bar').style.display = 'none';
+  refreshItemRowDatalist();
   prevBal();
 }
 
@@ -1312,63 +1323,23 @@ function addGodownToList(name){
   return false;
 }
 
-function renderSelect(list){
-  var sel = document.getElementById('fi');
-  if(!sel) return;
-  sel.innerHTML='';
-  list.forEach(function(p){
-    var opt = document.createElement('option');
-    opt.value = p;
-    opt.textContent = p;
-    sel.appendChild(opt);
-  });
-}
-
-function filterProd(q){
-  var ql=(q||'').toLowerCase().trim();
-  var matched = ql ? PRODUCTS.filter(function(p){return p.toLowerCase().indexOf(ql)>=0;}) : PRODUCTS;
-  renderSelect(matched);
-  
-  var bar = document.getElementById('add-product-bar');
-  var exactMatch = PRODUCTS.some(function(p){return p.toLowerCase()===ql;});
-  if(ql && !exactMatch){
-    document.getElementById('new-prod-name').textContent = q.trim();
-    bar.style.display='flex';
-  } else {
-    bar.style.display='none';
+function addNewProduct(name){
+  // name can be passed directly (from item row) or prompt fallback
+  if(!name){
+    var focused = document.querySelector('#item-rows > div input[type=text]:focus');
+    name = focused ? focused.value.trim() : '';
   }
-}
-
-function addNewProduct(){
-  var name = document.getElementById('fi-search').value.trim();
   if(!name){toast('Type a product name first');return;}
   if(PRODUCTS.some(function(p){return p.toLowerCase()===name.toLowerCase();})){
-    toast('Already in the list');return;
+    toast('”'+name+'” is already in the list'); return;
   }
   PRODUCTS.push(name);
   PRODUCTS.sort(function(a,b){return a.toLowerCase().localeCompare(b.toLowerCase());});
-  
   var custom = load('sr_custom_products') || [];
   custom.push(name);
   save('sr_custom_products', custom);
-  
-  renderSelect(PRODUCTS);
-  var sel = document.getElementById('fi');
-  for(var i=0;i<sel.options.length;i++){
-    if(sel.options[i].value===name){sel.selectedIndex=i;break;}
-  }
-  pickFromSelect();
-  document.getElementById('add-product-bar').style.display='none';
+  refreshItemRowDatalist();
   toast('&#10003; “'+name+'” added to product list');
-}
-
-function pickFromSelect(){
-  var sel=document.getElementById('fi');
-  if(sel && sel.value){
-    document.getElementById('fi-search').value=sel.value;
-    document.getElementById('fu').value='Pcs';
-  }
-  prevBal();
 }
 
 function coBalance(coIdx){
@@ -1377,35 +1348,26 @@ function coBalance(coIdx){
 }
 
 function prevBal(){
-  var q=parseInt(document.getElementById('fq').value)||0;
-  var cur=coBalance(curAddCo);
-  var after=curType==='IN'?cur+q:cur-q;
-  var el=document.getElementById('pbval');
-  el.textContent=after.toLocaleString()+' Pcs ('+companies[curAddCo]+')';
-  el.style.color=after<0?'#9C0006':after<10?'#854F0B':'#27500A';
+  updateItemCount();
 }
 
 function saveEntry(){
-  var d  = document.getElementById('fd').value;
-  var sel= document.getElementById('fi');
-  var it = (sel&&sel.value?sel.value:document.getElementById('fi-search').value).trim();
-  var q  = parseInt(document.getElementById('fq').value);
-  // party now handled by getPartyValue() above
-  var v  = document.getElementById('fv').value.trim();
-  var r  = document.getElementById('fr').value.trim();
+  var d   = document.getElementById('fd').value;
+  var v   = document.getElementById('fv').value.trim();
+  var r   = document.getElementById('fr').value.trim();
   var inv = (document.getElementById('finv')||{value:''}).value.trim();
-  var s  = currentUser.name;
-  var p = getPartyValue();
-  var isDmg = (curType==='DMGI'||curType==='DMGO');
+  var s   = currentUser.name;
+  var p   = getPartyValue();
+  var isDmg  = (curType==='DMGI'||curType==='DMGO');
   var isDmgt = curType==='DMGT';
   var isXfer = curType==='XFER';
   var godown = (curType==='OPEN'||isDmg||isDmgt||isXfer) ? getGodownValue() : '';
-  if(!d||!it||!q||q<1){ toast('Fill all required (*) fields'); return; }
+
+  if(!d){ toast('Please select a date'); return; }
   if((curType==='OPEN'||isDmg||isDmgt||isXfer)&&!godown){ toast('Please select or enter a Godown'); return; }
   if(curType!=='OPEN'&&!isDmg&&!isDmgt&&!isXfer&&!p){ toast('Please select or enter a Party name'); return; }
   if(curType==='DMGI'&&!p){ toast('Please select or enter a Customer / Party'); return; }
   if(curType==='DMGO'&&!p){ toast('Please select or enter a Supplier'); return; }
-  // DMGT: check company 6 (Damage) exists and is different from current
   if(isDmgt && curAddCo===6){ toast('Cannot transfer to Damage from Damage company'); return; }
 
   // XFER validation
@@ -1417,7 +1379,7 @@ function saveEntry(){
     if(xferToCo===curAddCo){ toast('Source and destination company must be different'); return; }
   }
 
-  // Extra fields
+  // Extra fields (OPEN / DAMAGE)
   var batchNo='', serialNo='', mfgDate='', expiryDate='';
   if(curType==='OPEN'){
     batchNo    = document.getElementById('fbatch').value.trim();
@@ -1431,61 +1393,63 @@ function saveEntry(){
     expiryDate = document.getElementById('fdmg-expiry').value;
   }
 
-  // DMGI adds to stock (IN), DMGO removes from stock (OUT), DMGT = OUT (moves to damage pool)
+  // Collect item rows
+  var itemRows = [];
+  document.querySelectorAll('#item-rows > div').forEach(function(div){
+    var inputs = div.querySelectorAll('input');
+    var item = inputs[0].value.trim();
+    var qty  = parseInt(inputs[1].value) || 0;
+    if(item && qty > 0) itemRows.push({item:item, qty:qty});
+  });
+  if(!itemRows.length){ toast('Add at least one item with quantity'); return; }
+
   var entryType = curType==='OPEN'?'IN':(curType==='DMGO'?'OUT':(curType==='DMGI'?'IN':(isDmgt?'OUT':(isXfer?'OUT':curType))));
   var autoParty = curType==='OPEN'?'Opening Stock':'';
-  var xferRef = isXfer ? ('XFER-'+(new Date()).getFullYear()+'-'+String(nid).padStart(4,'0')) : '';
-  var dmgtRef = isDmgt ? ('DMG-'+(new Date()).getFullYear()+'-'+String(nid).padStart(4,'0')) : '';
-  var entry = {
-    id:nid++, co:curAddCo, date:d, item:it, unit:'Pcs',
-    type:entryType, qty:q,
-    party: isXfer?(p||companies[xferToCo]):(isDmgt?(p||'Internal Damage'):(p || autoParty)),
-    staff:s, verified:v, remarks:r,
-    invoice: inv || (curType==='OPEN'?'OPENING':(curType==='DMGI'?'DAMAGE-IN':(curType==='DMGO'?'DAMAGE-OUT':(isDmgt?dmgtRef:(isXfer?xferRef:''))))),
-    openingStock: curType==='OPEN',
-    damage: isDmg || isDmgt,
-    damageType: (isDmg||isDmgt) ? curType : '',
-    transfer: isXfer || isDmgt,
-    transferRef: isXfer ? xferRef : (isDmgt ? dmgtRef : ''),
-    transferTo: isXfer ? xferToCo : (isDmgt ? 6 : -1),
-    godown: godown || '',
-    batchNo: batchNo, serialNo: serialNo, mfgDate: mfgDate, expiryDate: expiryDate
-  };
-  entries.push(entry);
+  var savedIds = [];
 
-  // For XFER: also create an IN entry in the destination company
-  var xferInEntry = null;
-  if(isXfer){
-    xferInEntry = {
-      id:nid++, co:xferToCo, date:d, item:it, unit:'Pcs',
-      type:'IN', qty:q,
-      party: companies[curAddCo],
-      staff:s, verified:v, remarks:(r?r+' ':'')+' [Transfer from '+companies[curAddCo]+']',
-      invoice: entry.invoice,
-      openingStock: false, damage: false, damageType: '',
-      transfer: true, transferRef: xferRef, transferFrom: curAddCo,
-      godown: xferToGodown || godown || '',
-      batchNo:'', serialNo:'', mfgDate:'', expiryDate:''
+  itemRows.forEach(function(row){
+    var it = row.item; var q = row.qty;
+    var xferRef = isXfer ? ('XFER-'+(new Date()).getFullYear()+'-'+String(nid).padStart(4,'0')) : '';
+    var dmgtRef = isDmgt ? ('DMG-'+(new Date()).getFullYear()+'-'+String(nid).padStart(4,'0')) : '';
+    var entry = {
+      id:nid++, co:curAddCo, date:d, item:it, unit:'Pcs',
+      type:entryType, qty:q,
+      party: isXfer?(p||companies[xferToCo]):(isDmgt?(p||'Internal Damage'):(p||autoParty)),
+      staff:s, verified:v, remarks:r,
+      invoice: inv||(curType==='OPEN'?'OPENING':(curType==='DMGI'?'DAMAGE-IN':(curType==='DMGO'?'DAMAGE-OUT':(isDmgt?dmgtRef:(isXfer?xferRef:''))))),
+      openingStock: curType==='OPEN',
+      damage: isDmg||isDmgt, damageType: (isDmg||isDmgt)?curType:'',
+      transfer: isXfer||isDmgt, transferRef: isXfer?xferRef:(isDmgt?dmgtRef:''),
+      transferTo: isXfer?xferToCo:(isDmgt?6:-1),
+      godown: godown||'',
+      batchNo:batchNo, serialNo:serialNo, mfgDate:mfgDate, expiryDate:expiryDate
     };
-    entries.push(xferInEntry);
-  }
+    entries.push(entry);
+    savedIds.push(entry.id);
 
-  // For DMGT: create an IN entry in the Damage company (index 6)
-  var dmgtInEntry = null;
-  if(isDmgt){
-    dmgtInEntry = {
-      id:nid++, co:6, date:d, item:it, unit:'Pcs',
-      type:'IN', qty:q,
-      party: companies[curAddCo],
-      staff:s, verified:v, remarks:(r?r+' ':'')+' [Damage from '+companies[curAddCo]+']',
-      invoice: dmgtRef,
-      openingStock: false, damage: true, damageType: 'DMGT',
-      transfer: true, transferRef: dmgtRef, transferFrom: curAddCo,
-      godown: godown || '',
-      batchNo: batchNo, serialNo: serialNo, mfgDate: mfgDate, expiryDate: expiryDate
-    };
-    entries.push(dmgtInEntry);
-  }
+    if(isXfer){
+      var xi = {
+        id:nid++, co:xferToCo, date:d, item:it, unit:'Pcs', type:'IN', qty:q,
+        party:companies[curAddCo], staff:s, verified:v,
+        remarks:(r?r+' ':'')+' [Transfer from '+companies[curAddCo]+']',
+        invoice:entry.invoice, openingStock:false, damage:false, damageType:'',
+        transfer:true, transferRef:xferRef, transferFrom:curAddCo,
+        godown:xferToGodown||godown||'', batchNo:'', serialNo:'', mfgDate:'', expiryDate:''
+      };
+      entries.push(xi); savedIds.push(xi.id);
+    }
+    if(isDmgt){
+      var di = {
+        id:nid++, co:6, date:d, item:it, unit:'Pcs', type:'IN', qty:q,
+        party:companies[curAddCo], staff:s, verified:v,
+        remarks:(r?r+' ':'')+' [Damage from '+companies[curAddCo]+']',
+        invoice:dmgtRef, openingStock:false, damage:true, damageType:'DMGT',
+        transfer:true, transferRef:dmgtRef, transferFrom:curAddCo,
+        godown:godown||'', batchNo:batchNo, serialNo:serialNo, mfgDate:mfgDate, expiryDate:expiryDate
+      };
+      entries.push(di); savedIds.push(di.id);
+    }
+  });
 
   entries.sort(function(a,b){return a.date.localeCompare(b.date);});
   addPartyToList(p);
@@ -1496,30 +1460,85 @@ function saveEntry(){
   var saveBtn = document.querySelector('.btn.btn-p');
   if(saveBtn){ saveBtn.disabled=true; saveBtn.textContent='Saving...'; }
   persist()
-    .then(function(res){
-      if(saveBtn){ saveBtn.disabled=false; saveBtn.innerHTML='&#10003; Save Entry'; }
+    .then(function(){
+      if(saveBtn){ saveBtn.disabled=false; saveBtn.innerHTML='&#10003; Save Entries'; }
+      var n = itemRows.length;
       toast(isXfer
-        ? '&#8644; Transfer saved — '+q+' '+it+' → '+companies[xferToCo]
+        ? '&#8644; Transfer saved — '+n+' item(s) → '+companies[xferToCo]
         : isDmgt
-          ? '&#128465; Damage transfer saved — '+q+' '+it+' → '+(companies[6]||'Damage')
-          : '&#10003; Saved — '+curType+' '+q+' '+it);
+          ? '&#128465; Damage transfer saved — '+n+' item(s)'
+          : '&#10003; Saved — '+n+' '+curType+' entr'+(n===1?'y':'ies'));
     })
     .catch(function(e){
-      if(saveBtn){ saveBtn.disabled=false; saveBtn.innerHTML='&#10003; Save Entry'; }
-      entries = entries.filter(function(x){return x.id!==entry.id&&(!xferInEntry||x.id!==xferInEntry.id)&&(!dmgtInEntry||x.id!==dmgtInEntry.id);});
-      nid = nid - ((isXfer||isDmgt)?2:1);
+      if(saveBtn){ saveBtn.disabled=false; saveBtn.innerHTML='&#10003; Save Entries'; }
+      entries = entries.filter(function(x){ return savedIds.indexOf(x.id)===-1; });
+      nid -= savedIds.length;
       updateEntCount();
       toast('&#9888; Save failed: '+e.message);
     });
 }
 
+// ── BULK ENTRY ──
+// ── ITEM ROWS (multi-item entry) ──
+var _itemRowId = 0;
+
+function addItemRow(){
+  var rid = ++_itemRowId;
+  var dlId = 'item-dl-'+rid;
+  var div = document.createElement('div');
+  div.id = 'item-row-'+rid;
+  div.style.cssText = 'display:grid;grid-template-columns:1fr 90px 32px;gap:6px;margin-bottom:6px;align-items:center';
+  var opts = PRODUCTS.map(function(p){return '<option value="'+p.replace(/"/g,'&quot;')+'">';}).join('');
+  div.innerHTML =
+    '<div><input type="text" list="'+dlId+'" placeholder="&#128269; type item name..." autocomplete="off" oninput="updateItemCount()" '+
+    'style="width:100%;padding:8px;border:1.5px solid #D0D7E6;border-radius:7px;font-size:13px;box-sizing:border-box">'+
+    '<datalist id="'+dlId+'" class="item-row-dl">'+opts+'</datalist></div>'+
+    '<input type="number" min="1" placeholder="Qty" oninput="updateItemCount()" style="padding:8px 6px;border:1.5px solid #D0D7E6;border-radius:7px;font-size:13px;width:100%;box-sizing:border-box">'+
+    '<button onclick="removeItemRow('+rid+')" style="background:#FFF0F0;border:1.5px solid #FFCDD2;color:#C62828;border-radius:7px;width:32px;height:32px;cursor:pointer;font-size:16px;line-height:1">×</button>';
+  document.getElementById('item-rows').appendChild(div);
+  div.querySelector('input[type=text]').focus();
+}
+
+function removeItemRow(rid){
+  var el = document.getElementById('item-row-'+rid);
+  // Don't remove the last row
+  if(el && document.querySelectorAll('#item-rows > div').length > 1){
+    el.parentNode.removeChild(el);
+  } else if(el) {
+    el.querySelectorAll('input').forEach(function(i){i.value='';});
+  }
+  updateItemCount();
+}
+
+function refreshItemRowDatalist(){
+  // Update all datalists when company changes
+  var opts = PRODUCTS.map(function(p){return '<option value="'+p.replace(/"/g,'&quot;')+'">';}).join('');
+  document.querySelectorAll('.item-row-dl').forEach(function(dl){ dl.innerHTML = opts; });
+}
+
+function updateItemCount(){
+  var count = 0;
+  document.querySelectorAll('#item-rows > div').forEach(function(div){
+    var inputs = div.querySelectorAll('input');
+    if(inputs[0].value.trim() && parseInt(inputs[1].value) > 0) count++;
+  });
+  var el = document.getElementById('pbval');
+  el.textContent = count + (count===1 ? ' item' : ' items');
+  el.style.color = count > 0 ? '#27500A' : '#888';
+}
+
+function initItemRows(){
+  document.getElementById('item-rows').innerHTML = '';
+  _itemRowId = 0;
+  addItemRow();
+  updateItemCount();
+}
+
 function clearForm(){
-  ['fq','fp','fv','fr','finv','fbatch','fserial','fmfg','fexpiry','fdmg-batch','fdmg-serial','fdmg-mfg','fdmg-expiry'].forEach(function(id){
+  ['fp','fv','fr','finv','fbatch','fserial','fmfg','fexpiry','fdmg-batch','fdmg-serial','fdmg-mfg','fdmg-expiry'].forEach(function(id){
     var el=document.getElementById(id); if(el) el.value='';
   });
-  document.getElementById('fu').value='Pcs';
-  document.getElementById('fi-search').value='';
-  renderSelect(PRODUCTS);
+  initItemRows();
   prevBal();
 }
 
@@ -3241,7 +3260,20 @@ function applyBulkEdit(){
 
   entries.forEach(function(e){
     if(bulkSelected[e.id]){
-      e[field] = newVal;
+      if(field === 'type'){
+        // Update flags to match the new transaction type
+        var t = newVal;
+        e.openingStock = (t === 'OPEN');
+        e.damage       = (t === 'DMGI' || t === 'DMGO' || t === 'DMGT');
+        e.damageType   = (t === 'DMGI' || t === 'DMGO' || t === 'DMGT') ? t : '';
+        e.transfer     = (t === 'XFER' || t === 'DMGT');
+        // Set the raw type field (IN/OUT) that drives stock arithmetic
+        if(t === 'OPEN' || t === 'DMGI' || t === 'XFER') e.type = 'IN';
+        else if(t === 'OUT' || t === 'DMGO' || t === 'DMGT') e.type = 'OUT';
+        else e.type = t; // IN or OUT passed directly
+      } else {
+        e[field] = newVal;
+      }
     }
   });
 
