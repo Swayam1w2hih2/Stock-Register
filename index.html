@@ -377,8 +377,13 @@ td{padding:8px 10px;border-bottom:1px solid #E8EEF6;vertical-align:middle}
       <input type="text" id="srch" placeholder="&#128269; Search item, party..." oninput="renderReg()">
       <select id="ftype" onchange="renderReg()">
         <option value="">All types</option>
-        <option value="IN">IN only</option>
-        <option value="OUT">OUT only</option>
+        <option value="IN">▲ Stock IN</option>
+        <option value="OUT">▼ Stock OUT</option>
+        <option value="OPEN">📦 Opening Stock</option>
+        <option value="DMGI">🔴 Damage IN</option>
+        <option value="DMGO">🔴 Damage OUT</option>
+        <option value="DMGT">🔴 Damage Transfer</option>
+        <option value="XFER">🔄 Transfer</option>
       </select>
       <select id="frec" onchange="renderReg()" style="padding:7px;border:1.5px solid #D0D7E6;border-radius:8px;font-size:12px">
         <option value="">All statuses</option>
@@ -389,7 +394,7 @@ td{padding:8px 10px;border-bottom:1px solid #E8EEF6;vertical-align:middle}
       <input type="date" id="fdate-from" onchange="renderReg()" style="padding:7px;border:1.5px solid #D0D7E6;border-radius:8px;font-size:12px">
       <input type="date" id="fdate-to" onchange="renderReg()" style="padding:7px;border:1.5px solid #D0D7E6;border-radius:8px;font-size:12px">
       <button class="btn btn-o btn-sm" onclick="clearFil()">Clear</button>
-      <button class="btn btn-o btn-sm" onclick="downloadRegExcel()" style="background:#1F7A4D;color:#fff;border-color:#1F7A4D">&#11015; Download All (Excel)</button>
+      <button class="btn btn-o btn-sm" onclick="downloadRegExcel()" style="background:#1F7A4D;color:#fff;border-color:#1F7A4D">&#11015; Download Excel</button>
       <button class="btn btn-o btn-sm" id="bulk-edit-btn" onclick="toggleBulkEdit()" style="display:none;background:#5B3287;color:#fff;border-color:#5B3287">&#9998; Bulk Edit</button>
       <span style="font-size:12px;color:#888" id="rcnt"></span>
     </div>
@@ -1559,6 +1564,14 @@ function renderPartyDatalist(){
 function today(){ return new Date().toISOString().slice(0,10); }
 
 // ── REGISTER ──
+// Returns the display transaction type for an entry (OPEN, IN, OUT, DMGI, DMGO, DMGT, XFER)
+function getEntryTxType(e){
+  if(e.damageType) return e.damageType; // DMGI, DMGO, DMGT
+  if(e.openingStock) return 'OPEN';
+  if(e.transfer) return 'XFER';
+  return e.type; // IN or OUT
+}
+
 function renderReg(){
   var srch=(document.getElementById('srch').value||'').toLowerCase();
   var ft  =document.getElementById('ftype').value;
@@ -1567,7 +1580,7 @@ function renderReg(){
   var frec =(document.getElementById('frec')||{value:''}).value||'';
   var coEnt=entries.filter(function(e){return e.co===curRegCo;});
   var filt=coEnt.filter(function(e){
-    if(ft&&e.type!==ft)return false;
+    if(ft&&getEntryTxType(e)!==ft)return false;
     if(srch&&!(e.item.toLowerCase().includes(srch)||(e.staff||'').toLowerCase().includes(srch)||(e.party||'').toLowerCase().includes(srch)))return false;
     if(dfrom&&e.date<dfrom)return false;
     if(dto&&e.date>dto)return false;
@@ -1760,12 +1773,27 @@ function saveEditEntry(){
 }
 
 function exportCSV(){
-  var hdr=['Company','Date','Item','Unit','Type','Qty','Party','Invoice No.','Staff','Verified','Remarks','Mfg Date','Expiry Date'];
-  var coEnt=entries.filter(function(e){return e.co===curRegCo;});
-  var rows=coEnt.map(function(e){return[companies[e.co],e.date,e.item,e.unit,e.type,e.qty,e.party,e.invoice||'',e.staff,e.verified||'',e.remarks||'',e.mfgDate||'',e.expiryDate||''];});
+  var hdr=['Company','Date','Item','Unit','Tx Type','Qty','Party','Invoice No.','Staff','Verified','Remarks','Mfg Date','Expiry Date'];
+  var srch=(document.getElementById('srch').value||'').toLowerCase();
+  var ft  =document.getElementById('ftype').value;
+  var dfrom=(document.getElementById('fdate-from')||{}).value||'';
+  var dto  =(document.getElementById('fdate-to')||{}).value||'';
+  var frec =(document.getElementById('frec')||{value:''}).value||'';
+  var filt=entries.filter(function(e){
+    if(e.co!==curRegCo)return false;
+    if(ft&&getEntryTxType(e)!==ft)return false;
+    if(srch&&!(e.item.toLowerCase().includes(srch)||(e.staff||'').toLowerCase().includes(srch)||(e.party||'').toLowerCase().includes(srch)))return false;
+    if(dfrom&&e.date<dfrom)return false;
+    if(dto&&e.date>dto)return false;
+    if(frec==='matched'&&!e.reconciled)return false;
+    if(frec==='reviewed'&&e.reviewed!=='cross')return false;
+    if(frec==='pending'&&(e.reconciled||e.reviewed==='cross'))return false;
+    return true;
+  });
+  var rows=filt.map(function(e){return[companies[e.co],e.date,e.item,e.unit,getEntryTxType(e),e.qty,e.party||'',e.invoice||'',e.staff,e.verified||'',e.remarks||'',e.mfgDate||'',e.expiryDate||''];});
   var csv=[hdr].concat(rows).map(function(r){return r.map(function(v){return'"'+(v||'')+'"';}).join(',');}).join('\n');
   var a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='stock_'+companies[curRegCo].replace(/\s/g,'_')+'.csv';a.click();
-  toast('Exported');
+  toast('Exported '+filt.length+' entries');
 }
 
 function downloadRegExcel(){
@@ -1777,7 +1805,7 @@ function downloadRegExcel(){
   var frec =(document.getElementById('frec')||{value:''}).value||'';
   var filt=entries.filter(function(e){
     if(e.co!==curRegCo)return false;
-    if(ft&&e.type!==ft)return false;
+    if(ft&&getEntryTxType(e)!==ft)return false;
     if(srch&&!(e.item.toLowerCase().includes(srch)||(e.staff||'').toLowerCase().includes(srch)||(e.party||'').toLowerCase().includes(srch)))return false;
     if(dfrom&&e.date<dfrom)return false;
     if(dto&&e.date>dto)return false;
@@ -1796,7 +1824,7 @@ function downloadRegExcel(){
     if(e.type==='IN')itemRunning[e.item].in+=e.qty;
     else itemRunning[e.item].out+=e.qty;
     var ri=itemRunning[e.item].in, ro=itemRunning[e.item].out;
-    return [e.date,e.item,e.type,e.qty,e.party||'',e.invoice||'',e.staff||'',e.remarks||'',e.godown||'',e.mfgDate||'',e.expiryDate||'',ri,ro,ri-ro];
+    return [e.date,e.item,getEntryTxType(e),e.qty,e.party||'',e.invoice||'',e.staff||'',e.remarks||'',e.godown||'',e.mfgDate||'',e.expiryDate||'',ri,ro,ri-ro];
   });
 
   // Build Excel using SheetJS
@@ -2073,49 +2101,28 @@ function exportSummaryExcel(){
     custSheet.push([d.display,d.qty,d.count,top]);
   });
 
-  var regSheet=[['Date','Item','Type','Qty','Party','Invoice No.','Staff','Verified','Remarks']];
+  var regSheet=[['Date','Item','Tx Type','Qty','Party','Invoice No.','Staff','Verified','Remarks','Mfg Date','Expiry Date']];
   coEnt.forEach(function(e){
-    regSheet.push([e.date,e.item,e.type,e.qty,e.party||'',e.staff||'',e.verified||'',e.remarks||'']);
+    regSheet.push([e.date,e.item,getEntryTxType(e),e.qty,e.party||'',e.invoice||'',e.staff||'',e.verified||'',e.remarks||'',e.mfgDate||'',e.expiryDate||'']);
   });
 
-  function xmlEsc(s){
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  function makeSheet(data){
+    var ws = XLSX.utils.aoa_to_sheet(data);
+    var cols = data[0].map(function(h,ci){
+      var max = String(h).length;
+      data.slice(1).forEach(function(r){ var v=String(r[ci]||''); if(v.length>max) max=v.length; });
+      return {wch: Math.min(max+2, 40)};
+    });
+    ws['!cols'] = cols;
+    return ws;
   }
 
-  function sheetToXML(rows, sheetName){
-    var rows_xml = rows.map(function(row){
-      var cells = row.map(function(cell){
-        var v = cell===null||cell===undefined?'':cell;
-        if(typeof v==='number'){
-          return '<Cell><Data ss:Type="Number">'+v+'</Data></Cell>';
-        } else {
-          return '<Cell><Data ss:Type="String">'+xmlEsc(v)+'</Data></Cell>';
-        }
-      }).join('');
-      return '<Row>'+cells+'</Row>';
-    }).join('');
-    return '<Worksheet ss:Name="'+xmlEsc(sheetName)+'"><Table>'+rows_xml+'</Table></Worksheet>';
-  }
-
-  var xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
-    + '<?mso-application progid="Excel.Sheet"?>\n'
-    + '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"'
-    + ' xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">\n'
-    + sheetToXML(itemSheet, 'Item-wise') + '\n'
-    + sheetToXML(supSheet, 'Supplier-wise') + '\n'
-    + sheetToXML(custSheet, 'Customer-wise') + '\n'
-    + sheetToXML(regSheet, 'Full Register') + '\n'
-    + '</Workbook>';
-
-  var blob = new Blob([xml], {type:'application/vnd.ms-excel;charset=utf-8'});
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  a.href = url;
-  a.download = 'Summary_'+coName.replace(/[^a-zA-Z0-9]/g,'_')+'_'+today_str+'.xls';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, makeSheet(itemSheet), 'Item-wise');
+  XLSX.utils.book_append_sheet(wb, makeSheet(supSheet), 'Supplier-wise');
+  XLSX.utils.book_append_sheet(wb, makeSheet(custSheet), 'Customer-wise');
+  XLSX.utils.book_append_sheet(wb, makeSheet(regSheet), 'Full Register');
+  XLSX.writeFile(wb, 'Summary_'+coName.replace(/[^a-zA-Z0-9]/g,'_')+'_'+today_str+'.xlsx');
   toast('\u2713 Excel file downloaded');
 }
 
@@ -2186,19 +2193,16 @@ function renderDeletedLog(){
 function downloadDeletedExcel(){
   if(!DELETED_LOG.length){ toast('No deleted entries'); return; }
   var sorted = DELETED_LOG.slice().sort(function(a,b){ return new Date(b.deletedAt)-new Date(a.deletedAt); });
-  function esc(v){return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-  function cell(v){ if(typeof v==='number') return '<Cell><Data ss:Type="Number">'+v+'</Data></Cell>'; return '<Cell><Data ss:Type="String">'+esc(v)+'</Data></Cell>'; }
-  var hdr=['Deleted On','Deleted By','Company','Entry Date','Item','Type','Qty','Party','Invoice','Staff','Remarks'];
-  var xml='<?xml version="1.0"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Deleted Entries"><Table>';
-  xml+='<Row>'+hdr.map(function(h){return '<Cell><Data ss:Type="String">'+esc(h)+'</Data></Cell>';}).join('')+'</Row>';
-  sorted.forEach(function(d){
+  var hdr=['Deleted On','Deleted By','Company','Entry Date','Item','Tx Type','Qty','Party','Invoice','Staff','Remarks'];
+  var rows = sorted.map(function(d){
     var e=d.entry;
-    var delDateStr=new Date(d.deletedAt).toLocaleString();
-    xml+='<Row>'+[delDateStr,d.deletedBy,companies[e.co]||'?',e.date,e.item,e.type,e.qty,e.party||'',e.invoice||'',e.staff||'',e.remarks||''].map(cell).join('')+'</Row>';
+    return [new Date(d.deletedAt).toLocaleString(), d.deletedBy, companies[e.co]||'?', e.date, e.item, getEntryTxType(e), e.qty, e.party||'', e.invoice||'', e.staff||'', e.remarks||''];
   });
-  xml+='</Table></Worksheet></Workbook>';
-  var blob=new Blob([xml],{type:'application/vnd.ms-excel'});
-  var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='DeletedEntries_'+today()+'.xls'; a.click();
+  var ws = XLSX.utils.aoa_to_sheet([hdr].concat(rows));
+  ws['!cols'] = hdr.map(function(h,ci){ var max=h.length; rows.forEach(function(r){ var v=String(r[ci]||''); if(v.length>max) max=v.length; }); return {wch:Math.min(max+2,40)}; });
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Deleted Entries');
+  XLSX.writeFile(wb, 'DeletedEntries_'+today()+'.xlsx');
   toast('Downloading '+sorted.length+' deleted entries...');
 }
 
@@ -3024,32 +3028,18 @@ function exportRecExcel(){
   var data = window._recResults;
   if(!data){ toast('Run reconciliation first'); return; }
 
-  function xmlEsc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-  function sheetToXML(rows, name){
-    var r = rows.map(function(row){
-      return '<Row>'+row.map(function(v){
-        return '<Cell><Data ss:Type="'+(typeof v==='number'?'Number':'String')+'">'+xmlEsc(v)+'</Data></Cell>';
-      }).join('')+'</Row>';
-    }).join('');
-    return '<Worksheet ss:Name="'+xmlEsc(name)+'"><Table>'+r+'</Table></Worksheet>';
-  }
-
-  var rows = [['Product','Invoice Qty','App Qty','Difference','Price','Batch/Lot','Status','Entry Date','Staff']];
+  var hdr = ['Product','Invoice Qty','App Qty','Difference','Price','Batch/Lot','Status','Entry Date','Staff'];
+  var rows = [hdr];
   data.results.forEach(function(r){
     rows.push([r.product, r.invoiceQty||0, r.appQty||0, r.diff, r.price||'', r.batch||'',
       r.status==='match'?'Match':r.status==='missing'?'Not in App':r.status==='extra'?'Not in Invoice':'Mismatch',
-      r.entryDate, r.staff]);
+      r.entryDate||'', r.staff||'']);
   });
-
-  var xml = '<?xml version="1.0" encoding="UTF-8"?>\n<?mso-application progid="Excel.Sheet"?>\n'
-    + '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">\n'
-    + sheetToXML(rows, 'Reconciliation')
-    + '\n</Workbook>';
-
-  var a = document.createElement('a');
-  a.href = 'data:application/vnd.ms-excel;charset=utf-8,' + encodeURIComponent(xml);
-  a.download = 'Reconciliation_'+data.company.replace(/[^a-zA-Z0-9]/g,'_')+'_'+data.date+'.xls';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  var ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = hdr.map(function(h,ci){ var max=h.length; rows.slice(1).forEach(function(r){ var v=String(r[ci]||''); if(v.length>max) max=v.length; }); return {wch:Math.min(max+2,40)}; });
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Reconciliation');
+  XLSX.writeFile(wb, 'Reconciliation_'+data.company.replace(/[^a-zA-Z0-9]/g,'_')+'_'+data.date+'.xlsx');
   toast('\u2713 Exported');
 }
 
