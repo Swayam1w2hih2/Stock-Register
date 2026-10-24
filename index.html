@@ -1498,16 +1498,43 @@ function addItemRow(){
   var dlId = 'item-dl-'+rid;
   var div = document.createElement('div');
   div.id = 'item-row-'+rid;
-  div.style.cssText = 'display:grid;grid-template-columns:1fr 90px 32px;gap:6px;margin-bottom:6px;align-items:center';
+  div.style.cssText = 'margin-bottom:6px';
   var opts = PRODUCTS.map(function(p){return '<option value="'+p.replace(/"/g,'&quot;')+'">';}).join('');
   div.innerHTML =
-    '<div><input type="text" list="'+dlId+'" placeholder="&#128269; type item name..." autocomplete="off" oninput="updateItemCount()" '+
-    'style="width:100%;padding:8px;border:1.5px solid #D0D7E6;border-radius:7px;font-size:13px;box-sizing:border-box">'+
-    '<datalist id="'+dlId+'" class="item-row-dl">'+opts+'</datalist></div>'+
-    '<input type="number" min="1" placeholder="Qty" oninput="updateItemCount()" style="padding:8px 6px;border:1.5px solid #D0D7E6;border-radius:7px;font-size:13px;width:100%;box-sizing:border-box">'+
-    '<button onclick="removeItemRow('+rid+')" style="background:#FFF0F0;border:1.5px solid #FFCDD2;color:#C62828;border-radius:7px;width:32px;height:32px;cursor:pointer;font-size:16px;line-height:1">×</button>';
+    '<div style="display:grid;grid-template-columns:1fr 90px 32px;gap:6px;align-items:center">'+
+      '<div>'+
+        '<input type="text" list="'+dlId+'" placeholder="&#128269; type item name..." autocomplete="off" '+
+        'oninput="checkNewProduct('+rid+')" '+
+        'style="width:100%;padding:8px;border:1.5px solid #D0D7E6;border-radius:7px;font-size:13px;box-sizing:border-box">'+
+        '<datalist id="'+dlId+'" class="item-row-dl">'+opts+'</datalist>'+
+        '<div id="item-addbar-'+rid+'" style="display:none;margin-top:3px">'+
+          '<span style="font-size:11px;color:#888">Not in list: </span>'+
+          '<button onclick="addProductFromRow('+rid+')" style="font-size:11px;padding:2px 8px;background:#E8F5E9;border:1px solid #A5D6A7;border-radius:5px;color:#2E7D32;cursor:pointer;font-weight:700">➕ Add to product list</button>'+
+        '</div>'+
+      '</div>'+
+      '<input type="number" min="1" placeholder="Qty" oninput="updateItemCount()" style="padding:8px 6px;border:1.5px solid #D0D7E6;border-radius:7px;font-size:13px;width:100%;box-sizing:border-box">'+
+      '<button onclick="removeItemRow('+rid+')" style="background:#FFF0F0;border:1.5px solid #FFCDD2;color:#C62828;border-radius:7px;width:32px;height:32px;cursor:pointer;font-size:16px;line-height:1">×</button>'+
+    '</div>';
   document.getElementById('item-rows').appendChild(div);
   div.querySelector('input[type=text]').focus();
+}
+
+function checkNewProduct(rid){
+  updateItemCount();
+  var input = document.querySelector('#item-row-'+rid+' input[type=text]');
+  var bar   = document.getElementById('item-addbar-'+rid);
+  if(!input || !bar) return;
+  var val = input.value.trim();
+  var isNew = val && !PRODUCTS.some(function(p){ return p.toLowerCase()===val.toLowerCase(); });
+  bar.style.display = isNew ? 'block' : 'none';
+}
+
+function addProductFromRow(rid){
+  var input = document.querySelector('#item-row-'+rid+' input[type=text]');
+  if(!input) return;
+  var name = input.value.trim();
+  addNewProduct(name);
+  document.getElementById('item-addbar-'+rid).style.display = 'none';
 }
 
 function removeItemRow(rid){
@@ -3304,8 +3331,8 @@ function applyBulkEdit(){
       e.damage       = (t === 'DMGI' || t === 'DMGO' || t === 'DMGT');
       e.damageType   = (t === 'DMGI' || t === 'DMGO' || t === 'DMGT') ? t : '';
       e.transfer     = (t === 'XFER' || t === 'DMGT');
-      if(t === 'OPEN' || t === 'DMGI' || t === 'XFER') e.type = 'IN';
-      else if(t === 'OUT' || t === 'DMGO' || t === 'DMGT') e.type = 'OUT';
+      if(t === 'OPEN' || t === 'DMGI') e.type = 'IN';
+      else if(t === 'OUT' || t === 'DMGO' || t === 'DMGT' || t === 'XFER') e.type = 'OUT';
       else e.type = t;
 
       // For XFER: create a paired IN entry in the destination company
