@@ -1630,8 +1630,8 @@ function renderReg(){
     else itemRunning[e.item].out+=e.qty;
   });
 
-  // show only last 5 on screen
-  var SHOW = 5;
+  // In bulk mode show all; otherwise last 5
+  var SHOW = bulkMode ? filt.length : 5;
   var displayed = filt.slice(-SHOW);
   var total = filt.length;
 
@@ -1696,9 +1696,11 @@ function renderReg(){
   var chkCol = document.getElementById('bulk-chk-col');
   if(chkCol) chkCol.style.display = bulkMode ? '' : 'none';
 
-  var msg = total <= SHOW
-    ? total+' entr'+(total===1?'y':'ies')
-    : 'Last '+SHOW+' of '+total+' entries — download Excel for full list';
+  var msg = bulkMode
+    ? total+' entr'+(total===1?'y':'ies')+' shown (bulk mode)'
+    : total <= SHOW
+      ? total+' entr'+(total===1?'y':'ies')
+      : 'Last '+SHOW+' of '+total+' entries — download Excel for full list';
   document.getElementById('rcnt').textContent=msg;
   updateBulkCount();
 }
@@ -3208,7 +3210,7 @@ function bulkSelectAll(){
   var dto  =(document.getElementById('fdate-to')||{}).value||'';
   var filt=entries.filter(function(e){
     if(e.co!==curRegCo)return false;
-    if(ft&&e.type!==ft)return false;
+    if(ft&&getEntryTxType(e)!==ft)return false;
     if(srch&&!(e.item.toLowerCase().includes(srch)||(e.staff||'').toLowerCase().includes(srch)||(e.party||'').toLowerCase().includes(srch)))return false;
     if(dfrom&&e.date<dfrom)return false;
     if(dto&&e.date>dto)return false;
