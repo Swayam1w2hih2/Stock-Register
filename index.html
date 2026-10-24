@@ -1799,26 +1799,21 @@ function downloadRegExcel(){
     return [e.date,e.item,e.type,e.qty,e.party||'',e.invoice||'',e.staff||'',e.remarks||'',e.godown||'',e.mfgDate||'',e.expiryDate||'',ri,ro,ri-ro];
   });
 
-  // Build Excel XML (SpreadsheetML)
-  function esc(v){return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-  function cell(v){
-    if(typeof v==='number') return '<Cell><Data ss:Type="Number">'+v+'</Data></Cell>';
-    return '<Cell><Data ss:Type="String">'+esc(v)+'</Data></Cell>';
-  }
-  var xml='<?xml version="1.0"?><?mso-application progid="Excel.Sheet"?>';
-  xml+='<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">';
-  xml+='<Worksheet ss:Name="Stock Register"><Table>';
-  xml+='<Row>'+hdr.map(function(h){return '<Cell ss:StyleID="hdr"><Data ss:Type="String">'+esc(h)+'</Data></Cell>';}).join('')+'</Row>';
-  rows.forEach(function(r){xml+='<Row>'+r.map(cell).join('')+'</Row>';});
-  xml+='</Table></Worksheet></Workbook>';
+  // Build Excel using SheetJS
+  var wsData = [hdr].concat(rows);
+  var ws = XLSX.utils.aoa_to_sheet(wsData);
 
-  var blob=new Blob([xml],{type:'application/vnd.ms-excel'});
-  var url=URL.createObjectURL(blob);
-  var a=document.createElement('a');
-  a.href=url;
-  a.download='StockRegister_'+companies[curRegCo].replace(/\s+/g,'_')+'_'+today()+'.xls';
-  a.click();
-  setTimeout(function(){URL.revokeObjectURL(url);},2000);
+  // Auto column widths
+  var colWidths = hdr.map(function(h, ci){
+    var max = h.length;
+    rows.forEach(function(r){ var v=String(r[ci]||''); if(v.length>max) max=v.length; });
+    return {wch: Math.min(max+2, 40)};
+  });
+  ws['!cols'] = colWidths;
+
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Stock Register');
+  XLSX.writeFile(wb, 'StockRegister_'+companies[curRegCo].replace(/\s+/g,'_')+'_'+today()+'.xlsx');
   toast('Downloading '+filt.length+' entries...');
 }
 
