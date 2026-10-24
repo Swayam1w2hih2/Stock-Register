@@ -1626,7 +1626,10 @@ function renderReg(){
       '<td style="color:#555;font-size:11px">'+e.party+'</td>'+
       '<td style="font-size:11px;color:#2E75B6;font-weight:600">'+(e.invoice||'—')+'</td>'+
       '<td style="font-size:11px">'+e.staff+'</td>'+
-      '<td style="font-size:11px;color:#aaa">'+e.remarks+'</td>'+
+      '<td style="font-size:11px;color:#aaa">'+e.remarks+
+        (e.mfgDate?'<span style="font-size:9px;background:#E8F5E9;color:#2E7D32;padding:1px 6px;border-radius:8px;margin-left:3px;white-space:nowrap">📅 Mfg: '+e.mfgDate+'</span>':'')+
+        (e.expiryDate?'<span style="font-size:9px;background:#FFF3E0;color:#E65100;padding:1px 6px;border-radius:8px;margin-left:3px;white-space:nowrap">⏳ Exp: '+e.expiryDate+'</span>':'')+
+      '</td>'+
       '<td class="nc">'+ri.toLocaleString()+'</td>'+
       '<td class="nc">'+ro.toLocaleString()+'</td>'+
       '<td class="bal '+bc+'">'+bal.toLocaleString()+'</td>'+
@@ -1757,9 +1760,9 @@ function saveEditEntry(){
 }
 
 function exportCSV(){
-  var hdr=['Company','Date','Item','Unit','Type','Qty','Party','Invoice No.','Staff','Verified','Remarks'];
+  var hdr=['Company','Date','Item','Unit','Type','Qty','Party','Invoice No.','Staff','Verified','Remarks','Mfg Date','Expiry Date'];
   var coEnt=entries.filter(function(e){return e.co===curRegCo;});
-  var rows=coEnt.map(function(e){return[companies[e.co],e.date,e.item,e.unit,e.type,e.qty,e.party,e.invoice||'',e.staff,e.verified||'',e.remarks||''];});
+  var rows=coEnt.map(function(e){return[companies[e.co],e.date,e.item,e.unit,e.type,e.qty,e.party,e.invoice||'',e.staff,e.verified||'',e.remarks||'',e.mfgDate||'',e.expiryDate||''];});
   var csv=[hdr].concat(rows).map(function(r){return r.map(function(v){return'"'+(v||'')+'"';}).join(',');}).join('\n');
   var a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='stock_'+companies[curRegCo].replace(/\s/g,'_')+'.csv';a.click();
   toast('Exported');
@@ -1787,13 +1790,13 @@ function downloadRegExcel(){
 
   // Build rows with running balance per item
   var itemRunning={};
-  var hdr=['Date','Item','Type','Qty','Party','Invoice No.','Staff','Remarks','Godown','Running IN','Running OUT','Balance'];
+  var hdr=['Date','Item','Type','Qty','Party','Invoice No.','Staff','Remarks','Godown','Mfg Date','Expiry Date','Running IN','Running OUT','Balance'];
   var rows=filt.map(function(e){
     if(!itemRunning[e.item])itemRunning[e.item]={in:0,out:0};
     if(e.type==='IN')itemRunning[e.item].in+=e.qty;
     else itemRunning[e.item].out+=e.qty;
     var ri=itemRunning[e.item].in, ro=itemRunning[e.item].out;
-    return [e.date,e.item,e.type,e.qty,e.party||'',e.invoice||'',e.staff||'',e.remarks||'',e.godown||'',ri,ro,ri-ro];
+    return [e.date,e.item,e.type,e.qty,e.party||'',e.invoice||'',e.staff||'',e.remarks||'',e.godown||'',e.mfgDate||'',e.expiryDate||'',ri,ro,ri-ro];
   });
 
   // Build Excel XML (SpreadsheetML)
