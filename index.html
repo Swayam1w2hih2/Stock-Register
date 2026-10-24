@@ -436,6 +436,13 @@ td{padding:8px 10px;border-bottom:1px solid #E8EEF6;vertical-align:middle}
             <option value="XFER">🔄 XFER (Godown Transfer)</option>
           </select>
           <input type="date" id="bulk-val-date" style="padding:8px;border:1.5px solid #C9A8E8;border-radius:8px;font-size:13px;min-width:160px;display:none">
+          <!-- XFER extra fields -->
+          <div id="bulk-xfer-extra" style="display:none;margin-top:8px;display:none">
+            <label style="font-size:11px;font-weight:700;color:#555;display:block;margin-bottom:3px">Destination Company</label>
+            <select id="bulk-xfer-co" style="padding:8px;border:1.5px solid #C9A8E8;border-radius:8px;font-size:13px;min-width:160px;margin-bottom:6px;display:block"></select>
+            <label style="font-size:11px;font-weight:700;color:#555;display:block;margin-bottom:3px">Destination Godown</label>
+            <select id="bulk-xfer-godown" style="padding:8px;border:1.5px solid #C9A8E8;border-radius:8px;font-size:13px;min-width:160px;display:block"></select>
+          </div>
         </div>
         <button onclick="applyBulkEdit()" style="padding:9px 18px;background:#5B3287;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">&#10003; Apply</button>
         <button onclick="cancelBulkEdit()" style="padding:9px 14px;background:#eee;color:#555;border:none;border-radius:8px;font-size:13px;cursor:pointer">Cancel</button>
@@ -866,7 +873,7 @@ var currentUser = null;
 
 var CUSTOM_PRODUCTS = [];
 var PARTIES = [];
-var GODOWNS = ['Laketown','ChinaMandir'];
+var GODOWNS = ['Laketown','ChinaMandir','Burrabazar'];
 var DELETED_LOG = [];
 var curAddCo = 0;
 var curRegCo = 0;
@@ -954,6 +961,10 @@ function loadFromCloud(cb){
     if(data && data.customProducts) CUSTOM_PRODUCTS = data.customProducts;
     if(data && data.parties) PARTIES = data.parties;
     if(data && data.godowns && data.godowns.length) GODOWNS = data.godowns;
+    // Ensure built-in godowns are always present
+    ['Laketown','ChinaMandir','Burrabazar'].forEach(function(g){
+      if(!GODOWNS.some(function(x){return x.toLowerCase()===g.toLowerCase();})) GODOWNS.push(g);
+    });
     if(data && data.deletedLog) DELETED_LOG = data.deletedLog;
 
     entries.forEach(function(e){
@@ -3226,7 +3237,8 @@ function bulkFieldChanged(){
   var gdSel = document.getElementById('bulk-val-godown');
   var tySel = document.getElementById('bulk-val-type');
   var dtFld = document.getElementById('bulk-val-date');
-  txt.style.display='none'; gdSel.style.display='none'; tySel.style.display='none'; dtFld.style.display='none';
+  var xferExtra = document.getElementById('bulk-xfer-extra');
+  txt.style.display='none'; gdSel.style.display='none'; tySel.style.display='none'; dtFld.style.display='none'; xferExtra.style.display='none';
   if(!field){ wrap.style.display='none'; return; }
   wrap.style.display='block';
   if(field==='godown'){
@@ -3235,11 +3247,34 @@ function bulkFieldChanged(){
     gdSel.style.display='block';
   } else if(field==='type'){
     tySel.style.display='block';
+    tySel.onchange = bulkTypeSelChanged;
+    bulkTypeSelChanged();
   } else if(field==='date'){
     dtFld.value=today(); dtFld.style.display='block';
   } else {
-    txt.placeholder = field==='party'?'New supplier name...' : field==='remarks'?'New remarks...' : 'New value...';
+    txt.placeholder = field==='party'?'New party name...' : field==='remarks'?'New remarks...' : 'New value...';
     txt.style.display='block';
+  }
+}
+
+function bulkTypeSelChanged(){
+  var tySel = document.getElementById('bulk-val-type');
+  var xferExtra = document.getElementById('bulk-xfer-extra');
+  if(tySel.value === 'XFER'){
+    xferExtra.style.display = 'block';
+    // Populate destination company (exclude current register company and Damage)
+    var coCo = document.getElementById('bulk-xfer-co');
+    coCo.innerHTML = '<option value="">-- Select company --</option>';
+    companies.forEach(function(c,i){
+      if(i === curRegCo || i === 6) return; // skip current & damage pool
+      var o = document.createElement('option'); o.value=i; o.textContent=c||'Company '+(i+1); coCo.appendChild(o);
+    });
+    // Populate godown
+    var gdSel = document.getElementById('bulk-xfer-godown');
+    gdSel.innerHTML = '<option value="">-- Same godown --</option>';
+    GODOWNS.forEach(function(g){ var o=document.createElement('option'); o.value=g; o.textContent=g; gdSel.appendChild(o); });
+  } else {
+    xferExtra.style.display = 'none';
   }
 }
 
@@ -3258,24 +3293,43 @@ function applyBulkEdit(){
   if(!newVal){ toast('Enter a new value'); return; }
   if(!confirm('Apply "'+field+' = '+newVal+'" to '+ids.length+' entries?')) return;
 
+  var newEntries = [];
   entries.forEach(function(e){
-    if(bulkSelected[e.id]){
-      if(field === 'type'){
-        // Update flags to match the new transaction type
-        var t = newVal;
-        e.openingStock = (t === 'OPEN');
-        e.damage       = (t === 'DMGI' || t === 'DMGO' || t === 'DMGT');
-        e.damageType   = (t === 'DMGI' || t === 'DMGO' || t === 'DMGT') ? t : '';
-        e.transfer     = (t === 'XFER' || t === 'DMGT');
-        // Set the raw type field (IN/OUT) that drives stock arithmetic
-        if(t === 'OPEN' || t === 'DMGI' || t === 'XFER') e.type = 'IN';
-        else if(t === 'OUT' || t === 'DMGO' || t === 'DMGT') e.type = 'OUT';
-        else e.type = t; // IN or OUT passed directly
-      } else {
-        e[field] = newVal;
+    if(!bulkSelected[e.id]) return;
+    if(field === 'type'){
+      var t = newVal;
+      e.openingStock = (t === 'OPEN');
+      e.damage       = (t === 'DMGI' || t === 'DMGO' || t === 'DMGT');
+      e.damageType   = (t === 'DMGI' || t === 'DMGO' || t === 'DMGT') ? t : '';
+      e.transfer     = (t === 'XFER' || t === 'DMGT');
+      if(t === 'OPEN' || t === 'DMGI' || t === 'XFER') e.type = 'IN';
+      else if(t === 'OUT' || t === 'DMGO' || t === 'DMGT') e.type = 'OUT';
+      else e.type = t;
+
+      // For XFER: create a paired IN entry in the destination company
+      if(t === 'XFER'){
+        var xferToCo = parseInt(document.getElementById('bulk-xfer-co').value);
+        var xferToGd = document.getElementById('bulk-xfer-godown').value || e.godown || '';
+        if(isNaN(xferToCo) || xferToCo < 0){ toast('Select a destination company'); return; }
+        var xferRef = e.transferRef || ('XFER-'+(new Date()).getFullYear()+'-'+String(nid).padStart(4,'0'));
+        e.transferRef = xferRef;
+        e.transferTo  = xferToCo;
+        newEntries.push({
+          id:nid++, co:xferToCo, date:e.date, item:e.item, unit:e.unit||'Pcs',
+          type:'IN', qty:e.qty,
+          party: companies[curRegCo],
+          staff:e.staff, verified:e.verified, remarks:(e.remarks?e.remarks+' ':'')+' [Transfer from '+companies[curRegCo]+']',
+          invoice:xferRef,
+          openingStock:false, damage:false, damageType:'',
+          transfer:true, transferRef:xferRef, transferFrom:curRegCo,
+          godown:xferToGd, batchNo:'', serialNo:'', mfgDate:'', expiryDate:''
+        });
       }
+    } else {
+      e[field] = newVal;
     }
   });
+  if(newEntries.length) entries = entries.concat(newEntries);
 
   persist().then(function(){
     toast('✓ Updated '+ids.length+' entries');
