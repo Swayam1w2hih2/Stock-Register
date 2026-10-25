@@ -1415,7 +1415,6 @@ function saveEntry(){
   });
   if(!itemRows.length){ toast('Add at least one item with quantity'); return; }
 
-  var entryType = curType==='OPEN'?'IN':(curType==='DMGO'?'OUT':(curType==='DMGI'?'IN':(isDmgt?'OUT':(isXfer?'OUT':curType))));
   var autoParty = curType==='OPEN'?'Opening Stock':'';
   var savedIds = [];
 
@@ -1423,43 +1422,82 @@ function saveEntry(){
     var it = row.item; var q = row.qty;
     var xferRef = isXfer ? ('XFER-'+(new Date()).getFullYear()+'-'+String(nid).padStart(4,'0')) : '';
     var dmgtRef = isDmgt ? ('DMG-'+(new Date()).getFullYear()+'-'+String(nid).padStart(4,'0')) : '';
-    var entry = {
-      id:nid++, co:curAddCo, date:d, item:it, unit:'Pcs',
-      type:entryType, qty:q,
-      party: isXfer?(p||companies[xferToCo]):(isDmgt?(p||'Internal Damage'):(p||autoParty)),
-      staff:s, verified:v, remarks:r,
-      invoice: inv||(curType==='OPEN'?'OPENING':(curType==='DMGI'?'DAMAGE-IN':(curType==='DMGO'?'DAMAGE-OUT':(isDmgt?dmgtRef:(isXfer?xferRef:''))))),
-      openingStock: curType==='OPEN',
-      damage: isDmg||isDmgt, damageType: (isDmg||isDmgt)?curType:'',
-      transfer: isXfer||isDmgt, transferRef: isXfer?xferRef:(isDmgt?dmgtRef:''),
-      transferTo: isXfer?xferToCo:(isDmgt?6:-1),
-      godown: godown||'',
-      batchNo:batchNo, serialNo:serialNo, mfgDate:mfgDate, expiryDate:expiryDate
-    };
-    entries.push(entry);
-    savedIds.push(entry.id);
+    var dmgiRef = curType==='DMGI' ? ('DMGI-'+(new Date()).getFullYear()+'-'+String(nid).padStart(4,'0')) : '';
 
-    if(isXfer){
-      var xi = {
-        id:nid++, co:xferToCo, date:d, item:it, unit:'Pcs', type:'IN', qty:q,
-        party:companies[curAddCo], staff:s, verified:v,
-        remarks:(r?r+' ':'')+' [Transfer from '+companies[curAddCo]+']',
-        invoice:entry.invoice, openingStock:false, damage:false, damageType:'',
-        transfer:true, transferRef:xferRef, transferFrom:curAddCo,
-        godown:xferToGodown||godown||'', batchNo:'', serialNo:'', mfgDate:'', expiryDate:''
-      };
-      entries.push(xi); savedIds.push(xi.id);
-    }
-    if(isDmgt){
-      var di = {
-        id:nid++, co:6, date:d, item:it, unit:'Pcs', type:'IN', qty:q,
-        party:companies[curAddCo], staff:s, verified:v,
-        remarks:(r?r+' ':'')+' [Damage from '+companies[curAddCo]+']',
-        invoice:dmgtRef, openingStock:false, damage:true, damageType:'DMGT',
-        transfer:true, transferRef:dmgtRef, transferFrom:curAddCo,
+    if(curType==='DMGI'){
+      // DMGI: OUT from current company → IN to Damage pool (co:6)
+      var dmgiOut = {
+        id:nid++, co:curAddCo, date:d, item:it, unit:'Pcs', type:'OUT', qty:q,
+        party: p||'Damage Pool', staff:s, verified:v, remarks:r,
+        invoice: inv||dmgiRef,
+        openingStock:false, damage:true, damageType:'DMGI',
+        transfer:true, transferRef:dmgiRef, transferTo:6,
         godown:godown||'', batchNo:batchNo, serialNo:serialNo, mfgDate:mfgDate, expiryDate:expiryDate
       };
-      entries.push(di); savedIds.push(di.id);
+      var dmgiIn = {
+        id:nid++, co:6, date:d, item:it, unit:'Pcs', type:'IN', qty:q,
+        party: companies[curAddCo], staff:s, verified:v,
+        remarks:(r?r+' ':'')+' [Damage IN from '+companies[curAddCo]+']',
+        invoice: inv||dmgiRef,
+        openingStock:false, damage:true, damageType:'DMGI',
+        transfer:true, transferRef:dmgiRef, transferFrom:curAddCo,
+        godown:godown||'', batchNo:batchNo, serialNo:serialNo, mfgDate:mfgDate, expiryDate:expiryDate
+      };
+      entries.push(dmgiOut); savedIds.push(dmgiOut.id);
+      entries.push(dmgiIn);  savedIds.push(dmgiIn.id);
+
+    } else if(curType==='DMGO'){
+      // DMGO: OUT from Damage pool only
+      var dmgoEntry = {
+        id:nid++, co:6, date:d, item:it, unit:'Pcs', type:'OUT', qty:q,
+        party: p||companies[curAddCo], staff:s, verified:v, remarks:r,
+        invoice: inv||'DAMAGE-OUT',
+        openingStock:false, damage:true, damageType:'DMGO',
+        transfer:false, transferRef:'', transferTo:-1,
+        godown:godown||'', batchNo:batchNo, serialNo:serialNo, mfgDate:mfgDate, expiryDate:expiryDate
+      };
+      entries.push(dmgoEntry); savedIds.push(dmgoEntry.id);
+
+    } else {
+      // IN, OUT, OPEN, XFER, DMGT
+      var entryType = curType==='OPEN'?'IN':(isDmgt?'OUT':(isXfer?'OUT':curType));
+      var entry = {
+        id:nid++, co:curAddCo, date:d, item:it, unit:'Pcs',
+        type:entryType, qty:q,
+        party: isXfer?(p||companies[xferToCo]):(isDmgt?(p||'Internal Damage'):(p||autoParty)),
+        staff:s, verified:v, remarks:r,
+        invoice: inv||(curType==='OPEN'?'OPENING':(isDmgt?dmgtRef:(isXfer?xferRef:''))),
+        openingStock: curType==='OPEN',
+        damage: isDmgt, damageType: isDmgt?'DMGT':'',
+        transfer: isXfer||isDmgt, transferRef: isXfer?xferRef:(isDmgt?dmgtRef:''),
+        transferTo: isXfer?xferToCo:(isDmgt?6:-1),
+        godown: godown||'',
+        batchNo:batchNo, serialNo:serialNo, mfgDate:mfgDate, expiryDate:expiryDate
+      };
+      entries.push(entry); savedIds.push(entry.id);
+
+      if(isXfer){
+        var xi = {
+          id:nid++, co:xferToCo, date:d, item:it, unit:'Pcs', type:'IN', qty:q,
+          party:companies[curAddCo], staff:s, verified:v,
+          remarks:(r?r+' ':'')+' [Transfer from '+companies[curAddCo]+']',
+          invoice:entry.invoice, openingStock:false, damage:false, damageType:'',
+          transfer:true, transferRef:xferRef, transferFrom:curAddCo,
+          godown:xferToGodown||godown||'', batchNo:'', serialNo:'', mfgDate:'', expiryDate:''
+        };
+        entries.push(xi); savedIds.push(xi.id);
+      }
+      if(isDmgt){
+        var di = {
+          id:nid++, co:6, date:d, item:it, unit:'Pcs', type:'IN', qty:q,
+          party:companies[curAddCo], staff:s, verified:v,
+          remarks:(r?r+' ':'')+' [Damage from '+companies[curAddCo]+']',
+          invoice:dmgtRef, openingStock:false, damage:true, damageType:'DMGT',
+          transfer:true, transferRef:dmgtRef, transferFrom:curAddCo,
+          godown:godown||'', batchNo:batchNo, serialNo:serialNo, mfgDate:mfgDate, expiryDate:expiryDate
+        };
+        entries.push(di); savedIds.push(di.id);
+      }
     }
   });
 
@@ -1479,7 +1517,11 @@ function saveEntry(){
         ? '&#8644; Transfer saved — '+n+' item(s) → '+companies[xferToCo]
         : isDmgt
           ? '&#128465; Damage transfer saved — '+n+' item(s)'
-          : '&#10003; Saved — '+n+' '+curType+' entr'+(n===1?'y':'ies'));
+          : curType==='DMGI'
+            ? '&#128465; Damage IN saved — '+n+' item(s) → Damage Pool'
+            : curType==='DMGO'
+              ? '&#128465; Damage OUT saved — '+n+' item(s) from Damage Pool'
+              : '&#10003; Saved — '+n+' '+curType+' entr'+(n===1?'y':'ies'));
     })
     .catch(function(e){
       if(saveBtn){ saveBtn.disabled=false; saveBtn.innerHTML='&#10003; Save Entries'; }
@@ -1682,13 +1724,13 @@ function renderReg(){
     var xferLinked = '';
     if(e.transfer){
       var linkedCo = e.type==='OUT' ? companies[e.transferTo] : companies[e.transferFrom];
-      if(e.damageType==='DMGT'){
-        xferLinked = linkedCo ? ' <span style="font-size:9px;background:#FDF3E3;color:#7B4800;padding:1px 5px;border-radius:10px;font-weight:700">&#128465; '+(e.type==='OUT'?'→ ':'← ')+linkedCo+'</span>' : '';
+      if(e.damageType==='DMGT'||e.damageType==='DMGI'){
+        xferLinked = linkedCo ? '<br><span style="font-size:9px;background:#FDF3E3;color:#7B4800;padding:1px 5px;border-radius:10px;font-weight:700">&#128465; '+(e.type==='OUT'?'→ ':'← ')+linkedCo+'</span>' : '';
       } else {
-        xferLinked = linkedCo ? ' <span style="font-size:9px;background:#E8F4FD;color:#0D47A1;padding:1px 5px;border-radius:10px;font-weight:700">⇔ '+(e.type==='OUT'?'→ ':'← ')+linkedCo+'</span>' : '';
+        xferLinked = linkedCo ? '<br><span style="font-size:9px;background:#E8F4FD;color:#0D47A1;padding:1px 5px;border-radius:10px;font-weight:700">&#8644; '+(e.type==='OUT'?'→ ':'← ')+linkedCo+'</span>' : '';
       }
     }
-    var rowBg = bulkSelected[e.id]?'background:#F3EDFB;':e.damageType==='DMGT'?'background:#FDF3E3;':e.transfer?'background:#F0F8FF;':'';
+    var rowBg = bulkSelected[e.id]?'background:#F3EDFB;':(e.damageType)?'background:#FDF3E3;':e.transfer?'background:#F0F8FF;':'';
     return '<tr id="brow-'+e.id+'" style="'+rowBg+'">'+ chkCell +
       '<td style="white-space:nowrap;color:#666;font-size:11px">'+e.date+'</td>'+
       '<td style="font-weight:600">'+e.item+xferLinked+'</td>'+
@@ -1701,10 +1743,6 @@ function renderReg(){
         (e.mfgDate?'<span style="font-size:9px;background:#E8F5E9;color:#2E7D32;padding:1px 6px;border-radius:8px;margin-left:3px;white-space:nowrap">📅 Mfg: '+e.mfgDate+'</span>':'')+
         (e.expiryDate?'<span style="font-size:9px;background:#FFF3E0;color:#E65100;padding:1px 6px;border-radius:8px;margin-left:3px;white-space:nowrap">⏳ Exp: '+e.expiryDate+'</span>':'')+
       '</td>'+
-      '<td class="nc">'+ri.toLocaleString()+'</td>'+
-      '<td class="nc">'+ro.toLocaleString()+'</td>'+
-      '<td class="bal '+bc+'">'+bal.toLocaleString()+'</td>'+
-      '<td style="white-space:nowrap">'+(currentUser.role==='admin'&&!bulkMode?'<button class="btn-d" onclick="openEditEntry('+e.id+')" style="margin-right:3px;background:#EBF3FB;color:#1F3864" title="Edit">&#9999;</button><button class="btn-d" onclick="delEntry('+e.id+')" title="Delete">&#128465;</button>':'')+'</td>'+
       '<td style="text-align:center">'+
         (currentUser.role==='admin'
           ?'<input type="checkbox" '+(e.reconciled?'checked':'')+' onchange="toggleReconciled('+e.id+',this.checked)" title="Mark as reconciled">'
@@ -1717,6 +1755,10 @@ function renderReg(){
             ?'<span style="color:#C0392B;font-weight:700" title="Reviewed — discrepancy noted">&#10007;</span>'
             :'<span style="color:#ccc" title="Pending">&#9675;</span>')+
       '</td>'+
+      '<td class="nc">'+ri.toLocaleString()+'</td>'+
+      '<td class="nc">'+ro.toLocaleString()+'</td>'+
+      '<td class="bal '+bc+'">'+bal.toLocaleString()+'</td>'+
+      '<td style="white-space:nowrap">'+(currentUser.role==='admin'&&!bulkMode?'<button class="btn-d" onclick="openEditEntry('+e.id+')" style="margin-right:3px;background:#EBF3FB;color:#1F3864" title="Edit">&#9999;</button><button class="btn-d" onclick="delEntry('+e.id+')" title="Delete">&#128465;</button>':'')+'</td>'+
     '</tr>';
   }).join('');
 
