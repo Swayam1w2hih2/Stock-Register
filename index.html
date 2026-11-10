@@ -580,6 +580,33 @@ td{padding:8px 10px;border-bottom:1px solid #E8EEF6;vertical-align:middle}
       <div id="custom-prod-list" style="font-size:13px;color:#555">Loading...</div>
     </div>
     <div class="card">
+      <div class="card-hd">&#128229; Import Item List</div>
+      <p style="font-size:12px;color:#888;margin-bottom:12px">Upload an Excel/CSV file with item names to add them to a company's product list. Existing items are skipped. Imported items are saved to the cloud, so every staff device sees them.</p>
+      <div style="margin-bottom:10px">
+        <label style="font-size:12px;font-weight:700;color:#555;display:block;margin-bottom:5px">Company</label>
+        <select id="il-co" onchange="ilUpdateSummary();ilPreview()" style="border:1.5px solid #ddd;font-size:14px;padding:10px;border-radius:8px;width:100%"></select>
+        <div id="il-summary" style="font-size:12px;color:#555;margin-top:6px"></div>
+      </div>
+      <div style="margin-bottom:10px">
+        <label style="font-size:12px;font-weight:700;color:#555;display:block;margin-bottom:5px">Excel / CSV file</label>
+        <input type="file" id="il-file" accept=".xlsx,.xls,.csv" onchange="ilFileSelected(this)" style="border:1.5px solid #ddd;font-size:14px;padding:10px;border-radius:8px;width:100%;background:#fff">
+      </div>
+      <div id="il-opts" style="display:none">
+        <div style="margin-bottom:10px">
+          <label style="font-size:12px;font-weight:700;color:#555;display:block;margin-bottom:5px">Sheet</label>
+          <select id="il-sheet" onchange="ilSheetSelected()" style="border:1.5px solid #ddd;font-size:14px;padding:10px;border-radius:8px;width:100%"></select>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;margin-bottom:10px;cursor:pointer"><input type="checkbox" id="il-hdr" checked onchange="ilSheetSelected()"> First row is a header</label>
+        <div style="margin-bottom:10px">
+          <label style="font-size:12px;font-weight:700;color:#555;display:block;margin-bottom:5px">Item name column</label>
+          <select id="il-col" onchange="ilPreview()" style="border:1.5px solid #ddd;font-size:14px;padding:10px;border-radius:8px;width:100%"></select>
+        </div>
+        <div id="il-preview" style="margin-bottom:12px;background:#F8FFF8;border:1px solid #B2DFC2;border-radius:8px;padding:12px;font-size:12px;max-height:220px;overflow-y:auto"></div>
+        <button class="btn btn-p btn-sm" id="il-btn" onclick="ilRunImport()" disabled>&#128229; Add to product list</button>
+      </div>
+      <div id="il-status" style="font-size:13px;margin-top:10px;color:#1F7A4D;display:none"></div>
+    </div>
+    <div class="card">
       <div class="card-hd">&#128269; Manage Supplier / Customer Names</div>
       <p style="font-size:12px;color:#888;margin-bottom:12px">View every supplier/customer name currently in use, and rename any of them — merging it into another existing name or a new one. All matching entries update automatically.</p>
       <button class="btn btn-o btn-sm" onclick="scanDuplicateParties()">&#128269; Show All Names</button>
@@ -873,6 +900,7 @@ var nid         = 1;
 var currentUser = null;
 
 var CUSTOM_PRODUCTS = [];
+var IMPORTED_PRODUCTS = {}; // {companyIndex: [item names]} — admin-imported, synced to cloud
 var PARTIES = [];
 var GODOWNS = ['Laketown','ChinaMandir','Burrabazar'];
 var DELETED_LOG = [];
@@ -926,6 +954,7 @@ function persist(){
     entries: entries,
     nid: nid,
     customProducts: CUSTOM_PRODUCTS,
+    importedProducts: IMPORTED_PRODUCTS,
     parties: PARTIES,
     godowns: GODOWNS,
     deletedLog: DELETED_LOG
@@ -960,6 +989,7 @@ function loadFromCloud(cb){
     if(data && data.entries) entries = data.entries;
     if(data && data.nid) nid = data.nid;
     if(data && data.customProducts) CUSTOM_PRODUCTS = data.customProducts;
+    if(data && data.importedProducts) IMPORTED_PRODUCTS = data.importedProducts;
     if(data && data.parties) PARTIES = data.parties;
     if(data && data.godowns && data.godowns.length) GODOWNS = data.godowns;
     // Ensure built-in godowns are always present
@@ -1093,6 +1123,9 @@ function selectAddCo(i){
     if(!PRODUCTS.some(function(p){return p.toLowerCase()===name.toLowerCase();})) {
       PRODUCTS.push(name);
     }
+  });
+  (IMPORTED_PRODUCTS[i]||[]).forEach(function(name){
+    if(!PRODUCTS.some(function(p){return p.toLowerCase()===name.toLowerCase();})) PRODUCTS.push(name);
   });
   PRODUCTS.sort(function(a,b){return a.toLowerCase().localeCompare(b.toLowerCase());});
   
@@ -2241,6 +2274,7 @@ function renderAdmin(){
   });
   renderUserList();
   renderCustomProducts();
+  renderItemImport();
   renderDeletedLog();
   renderXferHealth();
   populateClearCoSelect();
@@ -2827,7 +2861,7 @@ function selectRecCo(i){
   renderRecReviewed();
   document.getElementById('rec-results-card').style.display = 'none';
   // Refresh product datalist for all existing lines to match new company
-  var products = COMPANY_PRODUCTS[curRecCo] || [];
+  var products = (COMPANY_PRODUCTS[curRecCo] || []).concat(IMPORTED_PRODUCTS[curRecCo] || []);
   var options = products.map(function(p){ return '<option value="'+p.replace(/"/g,'&quot;')+'">'; }).join('');
   document.querySelectorAll('[id^="rec-product-list-"]').forEach(function(dl){
     dl.innerHTML = options;
@@ -2842,7 +2876,7 @@ function addRecLine(){
   div.id = 'rec-line-' + id;
   div.innerHTML =
     '<div><label>Product *</label><input type="text" id="rp-'+id+'" list="rec-product-list-'+id+'" placeholder="Product name" autocomplete="off"><datalist id="rec-product-list-'+id+'">' +
-      (COMPANY_PRODUCTS[curRecCo]||[]).map(function(p){ return '<option value="'+p.replace(/"/g,'&quot;')+'">'; }).join('') +
+      (COMPANY_PRODUCTS[curRecCo]||[]).concat(IMPORTED_PRODUCTS[curRecCo]||[]).map(function(p){ return '<option value="'+p.replace(/"/g,'&quot;')+'">'; }).join('') +
     '</datalist></div>' +
     '<div><label>Type *</label><select id="rt-'+id+'" style="width:100%;padding:8px;border:1.5px solid #D0D7E6;border-radius:8px;font-size:12px;box-sizing:border-box"><option value="IN">&#9650; Stock IN</option><option value="OUT">&#9660; Stock OUT</option></select></div>' +
     '<div><label>Invoice Qty *</label><input type="number" id="rq-'+id+'" min="1" placeholder="Qty"></div>' +
@@ -3605,6 +3639,162 @@ function runExcelImport(){
     renderReg();
     updateEntCount();
   }).catch(function(e){ toast('Error saving: '+e.message); });
+}
+
+// ── ADMIN: IMPORT ITEM LIST ──
+var _ilWb = null, _ilRows = null, _ilStart = 0, _ilNew = [];
+function _ilEsc(t){ return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function _ilClean(t){ return String(t==null?'':t).replace(/_x000D_/g,' ').replace(/[\r\n\t]+/g,' ').replace(/\s+/g,' ').trim(); }
+function _ilColName(n){ var s=''; n++; while(n>0){ var m=(n-1)%26; s=String.fromCharCode(65+m)+s; n=Math.floor((n-1)/26); } return s; }
+
+function renderItemImport(){
+  var sel = document.getElementById('il-co');
+  if(!sel) return;
+  var prev = sel.value;
+  sel.innerHTML = companies.map(function(n,i){
+    return i===DAMAGE_CO ? '' : '<option value="'+i+'">'+_ilEsc(n)+'</option>';
+  }).join('');
+  if(prev !== '') sel.value = prev;
+  ilUpdateSummary();
+}
+
+function ilUpdateSummary(){
+  var el = document.getElementById('il-summary');
+  var sel = document.getElementById('il-co');
+  if(!el || !sel || sel.value==='') return;
+  var co = parseInt(sel.value);
+  var n = (IMPORTED_PRODUCTS[co]||[]).length;
+  el.innerHTML = n
+    ? n+' imported item'+(n===1?'':'s')+' for this company &nbsp;<button class="btn-d" onclick="ilClear()">&#128465; Remove all imported</button>'
+    : 'No imported items for this company yet.';
+}
+
+function ilFileSelected(input){
+  if(!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      _ilWb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+    }catch(err){ toast('Could not read file'); return; }
+    var sel = document.getElementById('il-sheet');
+    sel.innerHTML = '';
+    _ilWb.SheetNames.forEach(function(sn){
+      var o = document.createElement('option'); o.value = sn; o.textContent = sn; sel.appendChild(o);
+    });
+    document.getElementById('il-opts').style.display = 'block';
+    document.getElementById('il-status').style.display = 'none';
+    ilSheetSelected();
+  };
+  reader.readAsArrayBuffer(input.files[0]);
+}
+
+function ilSheetSelected(){
+  if(!_ilWb) return;
+  var ws = _ilWb.Sheets[document.getElementById('il-sheet').value];
+  _ilRows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+  var first = -1;
+  for(var i=0;i<_ilRows.length;i++){
+    if(_ilRows[i].some(function(c){ return _ilClean(c); })){ first = i; break; }
+  }
+  var colSel = document.getElementById('il-col');
+  colSel.innerHTML = '';
+  if(first < 0){ _ilStart = 0; ilPreview(); return; }
+  var hasHdr = document.getElementById('il-hdr').checked;
+  _ilStart = hasHdr ? first+1 : first;
+  var width = 0;
+  _ilRows.forEach(function(r){ if(r.length > width) width = r.length; });
+  var guess = 0;
+  for(var c=0;c<width;c++){
+    var label = hasHdr ? _ilClean(_ilRows[first][c]) : '';
+    var o = document.createElement('option');
+    o.value = c;
+    o.textContent = label ? label+' (col '+_ilColName(c)+')' : 'Column '+_ilColName(c);
+    colSel.appendChild(o);
+    if(hasHdr && label && /item|product|name|description|particular|sku/i.test(label) && guess===0) guess = c;
+  }
+  colSel.value = guess;
+  ilPreview();
+}
+
+function ilPreview(){
+  var box = document.getElementById('il-preview');
+  var btn = document.getElementById('il-btn');
+  var coSel = document.getElementById('il-co');
+  if(!box || !_ilRows || coSel.value===''){ return; }
+  var co = parseInt(coSel.value);
+  var col = parseInt(document.getElementById('il-col').value);
+  var existing = {};
+  (COMPANY_PRODUCTS[co]||[]).concat(IMPORTED_PRODUCTS[co]||[], load('sr_custom_products')||[]).forEach(function(p){
+    existing[normItemKey(_ilClean(p))] = 1;
+  });
+  var seen = {}, fresh = [], total = 0, skipExisting = 0, skipDup = 0;
+  _ilRows.slice(_ilStart).forEach(function(r){
+    var name = _ilClean(r[col]);
+    if(!name) return;
+    total++;
+    var key = normItemKey(name);
+    if(existing[key]){ skipExisting++; return; }
+    if(seen[key]){ skipDup++; return; }
+    seen[key] = 1;
+    fresh.push(name);
+  });
+  _ilNew = fresh;
+  var html = '<strong>'+total+'</strong> rows read &nbsp;|&nbsp; <strong style="color:#27500A">'+fresh.length+' new</strong>'
+    + ' &nbsp;|&nbsp; '+skipExisting+' already in list'
+    + (skipDup ? ' &nbsp;|&nbsp; '+skipDup+' duplicate in file' : '')
+    + '<br><br>';
+  if(fresh.length){
+    fresh.slice(0,15).forEach(function(n){ html += '• '+_ilEsc(n)+'<br>'; });
+    if(fresh.length > 15) html += '<em style="color:#888">… and '+(fresh.length-15)+' more</em>';
+  } else {
+    html += '<em style="color:#888">No new items to add from this column.</em>';
+  }
+  box.innerHTML = html;
+  btn.disabled = !fresh.length;
+}
+
+function ilRunImport(){
+  if(!currentUser || currentUser.role !== 'admin'){ toast('Admin only'); return; }
+  var co = parseInt(document.getElementById('il-co').value);
+  if(isNaN(co) || !_ilNew.length){ return; }
+  if(!confirm('Add '+_ilNew.length+' new item'+(_ilNew.length===1?'':'s')+' to '+companies[co]+'?')) return;
+  var before = (IMPORTED_PRODUCTS[co]||[]).slice();
+  var list = before.concat(_ilNew);
+  list.sort(function(a,b){ return a.toLowerCase().localeCompare(b.toLowerCase()); });
+  IMPORTED_PRODUCTS[co] = list;
+  var added = _ilNew.length;
+  persist().then(function(){
+    var st = document.getElementById('il-status');
+    st.style.display = 'block';
+    st.textContent = '\u2713 Added '+added+' item'+(added===1?'':'s')+' to '+companies[co]+'.';
+    toast('\u2713 '+added+' items added');
+    selectAddCo(curAddCo);
+    ilUpdateSummary();
+    ilPreview();
+  }).catch(function(e){
+    IMPORTED_PRODUCTS[co] = before;
+    toast('Error saving: '+e.message);
+    ilPreview();
+  });
+}
+
+function ilClear(){
+  if(!currentUser || currentUser.role !== 'admin'){ toast('Admin only'); return; }
+  var co = parseInt(document.getElementById('il-co').value);
+  var before = IMPORTED_PRODUCTS[co] || [];
+  if(!before.length) return;
+  if(!confirm('Remove all '+before.length+' imported items from '+companies[co]+'?\n\nExisting stock entries are not affected.')) return;
+  delete IMPORTED_PRODUCTS[co];
+  persist().then(function(){
+    toast('Imported items removed');
+    selectAddCo(curAddCo);
+    ilUpdateSummary();
+    ilPreview();
+  }).catch(function(e){
+    IMPORTED_PRODUCTS[co] = before;
+    toast('Error saving: '+e.message);
+    ilUpdateSummary();
+  });
 }
 </script>
 </body>
